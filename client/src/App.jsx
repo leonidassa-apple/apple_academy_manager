@@ -13,6 +13,7 @@ import Admin from './pages/Admin';
 import Livros from './pages/Livros';
 import LivrosPublic from './pages/LivrosPublic';
 import EmprestimosLivros from './pages/EmprestimosLivros';
+import Inventory from './pages/Inventory';
 
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ function App() {
             <Route path="/eventos" element={<Eventos />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/dispositivos" element={<Equipments />} />
+            <Route path="/inventario" element={<Inventory />} />
             <Route path="/admin" element={<Admin />} />
 
             {/* Books Module Routes */}

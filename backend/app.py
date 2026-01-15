@@ -20,7 +20,7 @@ import re
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30) # Logout após 30 min inativo
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24) # Sessão dura 24h
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hora
 # Ajuste de Cookies para Localhost (HTTP <-> HTTPS Proxy)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'

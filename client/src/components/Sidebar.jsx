@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Smartphone, BookOpen, Calendar, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Smartphone, BookOpen, Calendar, Settings, LogOut, Archive } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,15 +8,17 @@ export default function Sidebar() {
     const navItems = [
         { to: '/dashboard', icon: LayoutDashboard, label: 'Painel' },
         { to: '/alunos', icon: Users, label: 'Alunos' },
-        { to: '/dispositivos', icon: Smartphone, label: 'Dispositivos' },
+        { to: '/devices', icon: Smartphone, label: 'Devices' },
         { to: '/emprestimos', icon: BookOpen, label: 'Empréstimos' },
         { to: '/agenda', icon: Calendar, label: 'Agenda' },
         { to: '/biblioteca', icon: BookOpen, label: 'Biblioteca' },
         { to: '/emprestimos-livros', icon: BookOpen, label: 'Circulação' },
-        { to: '/livros', icon: Settings, label: 'Ger. Acervo' },
     ];
 
     if (user?.role === 'admin') {
+        navItems.push({ to: '/dispositivos', icon: Smartphone, label: 'Controle de Equip.' });
+        navItems.push({ to: '/inventario', icon: Archive, label: 'Inventário' });
+        navItems.push({ to: '/livros', icon: Settings, label: 'Ger. Acervo' });
         navItems.push({ to: '/admin', icon: Settings, label: 'Administração' });
     }
 

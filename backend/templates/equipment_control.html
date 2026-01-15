@@ -1,0 +1,1048 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Equipment Control</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin') }}" class="btn btn-apple-outline me-2">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+        <button type="button" class="btn btn-apple-outline me-2" onclick="downloadTemplate()">
+            <i class="fas fa-download me-2"></i>Baixar Template
+        </button>
+        <button type="button" class="btn btn-apple-outline me-2" data-bs-toggle="modal" data-bs-target="#modalImportar">
+            <i class="fas fa-file-import me-2"></i>Importar
+        </button>
+        <button type="button" class="btn btn-apple-outline me-2" onclick="exportEquipmentData()">
+            <i class="fas fa-file-export me-2"></i>Exportar XLSX
+        </button>
+        <button type="button" class="btn btn-apple" data-bs-toggle="modal" data-bs-target="#modalEquipment">
+            <i class="fas fa-plus me-2"></i>Novo Equipment
+        </button>
+        <button type="button" class="btn btn-danger ms-2" id="btnDeleteSelected" style="display: none;"
+            onclick="deleteSelected()">
+            <i class="fas fa-trash me-2"></i>Deletar Selecionados (<span id="selectedCount">0</span>)
+        </button>
+    </div>
+</div>
+
+<!-- Mensagem de loading/erro -->
+<div id="loadingMessage" class="alert alert-info">
+    <i class="fas fa-spinner fa-spin me-2"></i>Carregando equipments...
+</div>
+
+<div id="errorMessage" class="alert alert-danger d-none">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <span id="errorText">Erro ao carregar dados</span>
+</div>
+
+<!-- Filtros e Busca -->
+<div class="row mb-4 align-items-end" id="filtersSection">
+    <div class="col-md-4">
+        <div class="d-flex flex-column h-100">
+            <label class="form-label small text-muted mb-1">Buscar equipment</label>
+            <div class="input-group flex-nowrap">
+                <input type="text" class="form-control" id="searchEquipment"
+                    placeholder="Buscar por tipo, modelo, número de série...">
+                <button class="btn btn-apple-outline" type="button" onclick="filterEquipment()">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="d-flex flex-column h-100">
+            <label class="form-label small text-muted mb-1">Status</label>
+            <select class="form-select" id="filterStatus">
+                <option value="">Todos os status</option>
+                <option value="Disponível">Disponível</option>
+                <option value="Emprestado">Emprestado</option>
+                <option value="Manutenção">Manutenção</option>
+                <option value="Reservado">Reservado</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="d-flex flex-column h-100">
+            <label class="form-label small text-muted mb-1">Itens por página</label>
+            <select class="form-select" id="itemsPerPage" onchange="changeItemsPerPage()">
+                <option value="10">10 por página</option>
+                <option value="20">20 por página</option>
+                <option value="50">50 por página</option>
+                <option value="100">100 por página</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Equipment -->
+<div class="card" id="tableSection" style="display: none;">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th width="50">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                        </th>
+                        <th>Tipo Device</th>
+                        <th>Número Série</th>
+                        <th>Modelo</th>
+                        <th>Cor</th>
+                        <th>Status</th>
+                        <th>Para Empréstimo</th>
+                        <th>Responsável</th>
+                        <th>Local</th>
+                        <th>Convênio</th>
+                        <th>Observação</th>
+                        <th>Data Cadastro</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="equipmentTableBody">
+                    <!-- Os equipments serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginação -->
+        <nav aria-label="Navegação de páginas">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- A paginação será gerada via JavaScript -->
+            </ul>
+        </nav>
+
+        <!-- Informações da página -->
+        <div class="text-center text-muted mt-2">
+            <small id="pageInfo">Mostrando 0 de 0 equipments</small>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Equipment -->
+<div class="modal fade" id="modalEquipment" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEquipmentTitle">Cadastrar Equipment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEquipment">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="equipment_id" id="equipment_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Coluna 1 -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo Device *</label>
+                                <select class="form-select" name="tipo_device" id="tipo_device" required>
+                                    <option value="">Carregando tipos...</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Número de Série *</label>
+                                <input type="text" class="form-control" name="numero_serie" id="numero_serie" required
+                                    placeholder="Número de série único">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" class="form-control" name="modelo" id="modelo"
+                                    placeholder="Ex: iPhone 15 Pro, MacBook Pro M2">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Cor</label>
+                                <input type="text" class="form-control" name="cor" id="cor"
+                                    placeholder="Ex: Preto, Prata, Azul">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Processador</label>
+                                <select class="form-select" name="processador" id="processador">
+                                    <option value="">Selecione...</option>
+                                    <option value="Chip M1">Chip M1</option>
+                                    <option value="Chip M2">Chip M2</option>
+                                    <option value="Chip M3">Chip M3</option>
+                                    <option value="Chip Intel">Chip Intel</option>
+                                    <option value="Chip A16">Chip A16</option>
+                                    <option value="Chip A17">Chip A17</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Memória</label>
+                                <input type="text" class="form-control" name="memoria" id="memoria"
+                                    placeholder="Ex: 8GB, 16GB, 32GB">
+                            </div>
+                        </div>
+
+                        <!-- Coluna 2 -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Status *</label>
+                                <select class="form-select" name="status" id="status" required>
+                                    <option value="Disponível" selected>Disponível</option>
+                                    <option value="Emprestado">Emprestado</option>
+                                    <option value="Manutenção">Manutenção</option>
+                                    <option value="Reservado">Reservado</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Para Empréstimo *</label>
+                                <select class="form-select" name="para_emprestimo" id="para_emprestimo" required>
+                                    <option value="true" selected>Sim</option>
+                                    <option value="false">Não</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Armazenamento</label>
+                                <input type="text" class="form-control" name="armazenamento" id="armazenamento"
+                                    placeholder="Ex: 128GB, 256GB, 512GB, 1TB">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Tela</label>
+                                <input type="text" class="form-control" name="tela" id="tela" placeholder="Ex: 13.3" ,
+                                    15", 6.1"">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Responsável</label>
+                                <input type="text" class="form-control" name="responsavel" id="responsavel"
+                                    placeholder="Nome do responsável">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Local</label>
+                                <input type="text" class="form-control" name="local" id="local"
+                                    placeholder="Localização do equipment">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos que ocupam linha completa -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">Convênio</label>
+                                <input type="text" class="form-control" name="convenio" id="convenio"
+                                    placeholder="Convênio ou Parceria">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">Observação</label>
+                                <textarea class="form-control" name="observacao" id="observacao" rows="2"
+                                    placeholder="Observações adicionais"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">* Campos obrigatórios</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-save me-2"></i>Salvar Equipment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Importar -->
+<div class="modal fade" id="modalImportar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importar Equipments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formImportar" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Selecione o arquivo</label>
+                        <input type="file" class="form-control" name="file" accept=".xlsx,.xls,.csv" required>
+                        <div class="form-text">
+                            Formatos suportados: Excel (.xlsx, .xls) ou CSV (.csv)
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">Estrutura esperada do arquivo:</h6>
+                        <small>
+                            <strong>Colunas obrigatórias:</strong> tipo_device, numero_serie<br>
+                            <strong>Colunas opcionais:</strong> modelo, cor, status, para_emprestimo, responsavel,
+                            local, convenio, observacao<br>
+                            <strong>Valores para status:</strong> "Disponível", "Emprestado", "Manutenção",
+                            "Reservado"<br>
+                            <strong>Valores para para_emprestimo:</strong> "Sim"/"Não" ou True/False
+                        </small>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="downloadTemplate()">
+                            <i class="fas fa-download me-1"></i>Baixar Template
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-upload me-2"></i>Importar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Variáveis globais para paginação
+    let currentPage = 1;
+    let itemsPerPage = 10;
+    let allEquipment = [];
+    let filteredEquipment = [];
+    let selectedEquipmentIds = new Set(); // Conjunto para armazenar IDs selecionados
+
+    // Inicializar quando o DOM estiver carregado
+    document.addEventListener('DOMContentLoaded', function () {
+        loadEquipmentFromAPI();
+        setupEventListeners();
+        setupModalEvents();
+        carregarTiposDevices();
+    });
+
+    // Carregar tipos de devices do sistema
+    function carregarTiposDevices() {
+        fetch('/api/tipos-devices/lista')
+            .then(response => response.json())
+            .then(result => {
+                const select = document.getElementById('tipo_device');
+                if (result.success) {
+                    select.innerHTML = '<option value="">Selecione o tipo...</option>';
+                    result.data.forEach(tipo => {
+                        select.innerHTML += `<option value="${tipo.nome}">${tipo.nome} (${tipo.categoria})</option>`;
+                    });
+                } else {
+                    select.innerHTML = '<option value="">Erro ao carregar tipos</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar tipos:', error);
+                const select = document.getElementById('tipo_device');
+                select.innerHTML = '<option value="">Erro ao carregar tipos</option>';
+            });
+    }
+
+    function setupEventListeners() {
+        // Busca em tempo real
+        document.getElementById('searchEquipment').addEventListener('input', filterEquipment);
+
+        // Filtro por status
+        document.getElementById('filterStatus').addEventListener('change', filterEquipment);
+    }
+
+    // Configurar eventos dos modais
+    function setupModalEvents() {
+        // Limpar formulário quando modal for fechado
+        const modalEquipment = document.getElementById('modalEquipment');
+        if (modalEquipment) {
+            modalEquipment.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('formEquipment').reset();
+                document.getElementById('equipment_id').value = '';
+                document.getElementById('modalEquipmentTitle').textContent = 'Cadastrar Equipment';
+            });
+        }
+    }
+
+    // Carregar equipments da API
+    function loadEquipmentFromAPI() {
+        showLoading(true);
+
+        fetch('/api/equipment-control')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na resposta da API: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (result.success) {
+                    allEquipment = result.data.map(equipment => ({
+                        id: equipment.id,
+                        tipo_device: equipment.tipo_device || '',
+                        numero_serie: equipment.numero_serie || '',
+                        modelo: equipment.modelo || '',
+                        cor: equipment.cor || '',
+                        status: equipment.status || 'Disponível',
+                        para_emprestimo: equipment.para_emprestimo ? 'Sim' : 'Não',
+                        responsavel: equipment.responsavel || '',
+                        local: equipment.local || '',
+                        convenio: equipment.convenio || '',
+                        observacao: equipment.observacao || '',
+                        data_cadastro: equipment.data_cadastro || 'N/A'
+                    }));
+
+                    filteredEquipment = [...allEquipment];
+                    showContent();
+                    renderTable();
+                } else {
+                    throw new Error(result.message || 'Erro ao carregar equipments');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar equipments:', error);
+                showError('Erro ao carregar equipments: ' + error.message);
+            });
+    }
+
+    // Mostrar/ocultar loading e conteúdo
+    function showLoading(show) {
+        document.getElementById('loadingMessage').style.display = show ? 'block' : 'none';
+        document.getElementById('filtersSection').style.display = show ? 'none' : 'block';
+        document.getElementById('tableSection').style.display = show ? 'none' : 'block';
+        document.getElementById('errorMessage').classList.add('d-none');
+    }
+
+    function showError(message) {
+        showLoading(false);
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('filtersSection').style.display = 'none';
+        document.getElementById('tableSection').style.display = 'none';
+        document.getElementById('errorText').textContent = message;
+        document.getElementById('errorMessage').classList.remove('d-none');
+    }
+
+    function showContent() {
+        showLoading(false);
+    }
+
+    // Filtrar equipments
+    function filterEquipment() {
+        const searchTerm = document.getElementById('searchEquipment').value.toLowerCase().trim();
+        const statusFilter = document.getElementById('filterStatus').value;
+
+        filteredEquipment = allEquipment.filter(equipment => {
+            // Busca por número de série (busca exata ou parcial)
+            const numeroSerieMatch = equipment.numero_serie &&
+                equipment.numero_serie.toLowerCase().includes(searchTerm);
+
+            // Busca em outros campos
+            const matchesSearch =
+                numeroSerieMatch ||
+                (equipment.tipo_device && equipment.tipo_device.toLowerCase().includes(searchTerm)) ||
+                (equipment.modelo && equipment.modelo.toLowerCase().includes(searchTerm)) ||
+                (equipment.cor && equipment.cor.toLowerCase().includes(searchTerm)) ||
+                (equipment.responsavel && equipment.responsavel.toLowerCase().includes(searchTerm)) ||
+                (equipment.local && equipment.local.toLowerCase().includes(searchTerm)) ||
+                (equipment.convenio && equipment.convenio.toLowerCase().includes(searchTerm)) ||
+                (equipment.observacao && equipment.observacao.toLowerCase().includes(searchTerm));
+
+            const matchesStatus = !statusFilter || equipment.status === statusFilter;
+
+            return matchesSearch && matchesStatus;
+        });
+
+        currentPage = 1;
+        renderTable();
+    }
+
+    // Mudar quantidade de itens por página
+    function changeItemsPerPage() {
+        itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+        currentPage = 1;
+        renderTable();
+    }
+
+    // Renderizar tabela com paginação
+    function renderTable() {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const currentEquipment = filteredEquipment.slice(startIndex, endIndex);
+
+        const tbody = document.getElementById('equipmentTableBody');
+        tbody.innerHTML = '';
+
+        if (currentEquipment.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="13" class="text-center text-muted py-4">
+                    <i class="fas fa-mobile-alt fa-2x mb-2 d-block"></i>
+                    Nenhum equipment encontrado
+                </td>
+            </tr>
+        `;
+        } else {
+            currentEquipment.forEach(equipment => {
+                const isChecked = selectedEquipmentIds.has(equipment.id);
+                const row = `
+                <tr>
+                    <td>
+                        <input type="checkbox" class="equipment-checkbox" value="${equipment.id}" ${isChecked ? 'checked' : ''} onchange="toggleEquipmentSelection(${equipment.id})">
+                    </td>
+                    <td><strong>${escapeHtml(equipment.tipo_device)}</strong></td>
+                    <td>${escapeHtml(equipment.numero_serie)}</td>
+                    <td>${escapeHtml(equipment.modelo) || '-'}</td>
+                    <td>${escapeHtml(equipment.cor) || '-'}</td>
+                    <td>
+                        <span class="badge ${getStatusBadgeClass(equipment.status)}">
+                            ${equipment.status}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge ${equipment.para_emprestimo === 'Sim' ? 'bg-success' : 'bg-secondary'}">
+                            ${equipment.para_emprestimo}
+                        </span>
+                    </td>
+                    <td>${escapeHtml(equipment.responsavel) || '-'}</td>
+                    <td>${escapeHtml(equipment.local) || '-'}</td>
+                    <td>${escapeHtml(equipment.convenio) || '-'}</td>
+                    <td>${escapeHtml(equipment.observacao) || '-'}</td>
+                    <td>${escapeHtml(equipment.data_cadastro)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-apple-outline" onclick="editarEquipment(${equipment.id})">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="excluirEquipment(${equipment.id}, '${escapeHtml(equipment.tipo_device).replace(/'/g, "\\'")}')">
+                                <i class="fas fa-trash me-1"></i>Excluir
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        renderPagination();
+        updatePageInfo();
+        updateSelectAllCheckbox();
+        updateDeleteButton();
+    }
+
+    // Função para obter a classe do badge baseado no status
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'Disponível': return 'bg-success';
+            case 'Emprestado': return 'bg-warning';
+            case 'Manutenção': return 'bg-danger';
+            case 'Reservado': return 'bg-info';
+            default: return 'bg-secondary';
+        }
+    }
+
+    // Função para escapar HTML (prevenção XSS)
+    function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return '';
+        return unsafe
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Renderizar paginação
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredEquipment.length / itemsPerPage);
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Botão Anterior
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;" aria-label="Anterior">
+            <span aria-hidden="true">&laquo;</span>
+        </a>
+    `;
+        pagination.appendChild(prevLi);
+
+        // Páginas
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            pageLi.innerHTML = `
+            <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+        `;
+            pagination.appendChild(pageLi);
+        }
+
+        // Botão Próximo
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;" aria-label="Próximo">
+            <span aria-hidden="true">&raquo;</span>
+        </a>
+    `;
+        pagination.appendChild(nextLi);
+    }
+
+    // Mudar página
+    function changePage(page) {
+        const totalPages = Math.ceil(filteredEquipment.length / itemsPerPage);
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        renderTable();
+
+        // Scroll para o topo da tabela
+        document.querySelector('.card-body').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Atualizar informações da página
+    function updatePageInfo() {
+        const startIndex = (currentPage - 1) * itemsPerPage + 1;
+        const endIndex = Math.min(currentPage * itemsPerPage, filteredEquipment.length);
+        const total = filteredEquipment.length;
+
+        document.getElementById('pageInfo').textContent =
+            `Mostrando ${startIndex} a ${endIndex} de ${total} equipments`;
+    }
+
+    // Submit do formulário
+    document.getElementById('formEquipment').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const equipmentId = formData.get('equipment_id');
+        const data = {
+            tipo_device: formData.get('tipo_device'),
+            numero_serie: formData.get('numero_serie'),
+            modelo: formData.get('modelo'),
+            cor: formData.get('cor'),
+            status: formData.get('status'),
+            para_emprestimo: formData.get('para_emprestimo') === 'true',
+            responsavel: formData.get('responsavel'),
+            local: formData.get('local'),
+            convenio: formData.get('convenio'),
+            observacao: formData.get('observacao'),
+            processador: formData.get('processador'),
+            memoria: formData.get('memoria'),
+            armazenamento: formData.get('armazenamento'),
+            tela: formData.get('tela')
+        };
+
+        if (!data.tipo_device || !data.numero_serie) {
+            alert('Por favor, preencha todos os campos obrigatórios!');
+            return;
+        }
+
+        const url = equipmentId ? `/api/equipment-control/${equipmentId}` : '/api/equipment-control';
+        const method = equipmentId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(equipmentId ? 'Equipment atualizado com sucesso!' : 'Equipment cadastrado com sucesso!');
+                    closeModal('modalEquipment');
+                    loadEquipmentFromAPI(); // Recarregar a lista
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao salvar equipment. Verifique o console para mais detalhes.');
+            });
+    });
+
+    // Fechar modal usando Bootstrap 5
+    function closeModal(modalId) {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+        }
+    }
+
+    // Abrir modal usando Bootstrap 5
+    function openModal(modalId) {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+    }
+
+    // Editar equipment - FUNÇÃO COMPLETAMENTE REESCRITA
+    function editarEquipment(equipmentId) {
+        console.log('🔍 Buscando equipment com ID:', equipmentId);
+
+        fetch(`/api/equipment-control/${equipmentId}`)
+            .then(response => {
+                console.log('📥 Resposta da API:', response.status);
+                if (!response.ok) {
+                    throw new Error('Erro na resposta da API: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(result => {
+                console.log('📦 Dados recebidos:', result);
+                if (result.success) {
+                    const equipment = result.data;
+                    console.log('🔧 Equipment data:', equipment);
+
+                    // Mudar título do modal
+                    document.getElementById('modalEquipmentTitle').textContent = 'Editar Equipment';
+
+                    // Abrir o modal primeiro
+                    const modalElement = document.getElementById('modalEquipment');
+                    const modal = new bootstrap.Modal(modalElement);
+
+                    // Preencher os campos quando o modal estiver completamente aberto
+                    modalElement.addEventListener('shown.bs.modal', function fillModalOnce() {
+                        console.log('✅ Modal completamente aberto, preenchendo campos...');
+                        fillFormFields(equipment);
+                        // Remover o listener após usar uma vez
+                        modalElement.removeEventListener('shown.bs.modal', fillModalOnce);
+                    }, { once: true });
+
+                    // Abrir o modal
+                    modal.show();
+
+                } else {
+                    console.error('❌ Erro na resposta da API:', result.message);
+                    alert('Erro ao carregar equipment: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro ao carregar equipment:', error);
+                alert('Erro ao carregar equipment. Verifique o console para mais detalhes.');
+            });
+    }
+
+    // Função separada para preencher os campos do formulário
+    function fillFormFields(equipment) {
+        console.log('🔧 Preenchendo campos com dados:', equipment);
+
+        // Verificar se os elementos existem antes de preencher
+        const elements = {
+            equipment_id: document.getElementById('equipment_id'),
+            tipo_device: document.getElementById('tipo_device'),
+            numero_serie: document.getElementById('numero_serie'),
+            modelo: document.getElementById('modelo'),
+            cor: document.getElementById('cor'),
+            status: document.getElementById('status'),
+            para_emprestimo: document.getElementById('para_emprestimo'),
+            responsavel: document.getElementById('responsavel'),
+            local: document.getElementById('local'),
+            convenio: document.getElementById('convenio'),
+            observacao: document.getElementById('observacao'),
+            processador: document.getElementById('processador'),
+            memoria: document.getElementById('memoria'),
+            armazenamento: document.getElementById('armazenamento'),
+            tela: document.getElementById('tela')
+        };
+
+        // Verificar se todos os elementos existem
+        for (const [key, element] of Object.entries(elements)) {
+            if (!element) {
+                console.error(`❌ Elemento não encontrado: ${key}`);
+                return;
+            }
+        }
+
+        // Preencher campos básicos
+        elements.equipment_id.value = equipment.id || '';
+        elements.tipo_device.value = equipment.tipo_device || '';
+        elements.numero_serie.value = equipment.numero_serie || '';
+        elements.modelo.value = equipment.modelo || '';
+        elements.cor.value = equipment.cor || '';
+        elements.status.value = equipment.status || 'Disponível';
+        elements.responsavel.value = equipment.responsavel || '';
+        elements.local.value = equipment.local || '';
+        elements.convenio.value = equipment.convenio || '';
+        elements.observacao.value = equipment.observacao || '';
+        elements.processador.value = equipment.processador || '';
+        elements.memoria.value = equipment.memoria || '';
+        elements.armazenamento.value = equipment.armazenamento || '';
+        elements.tela.value = equipment.tela || '';
+
+        // CORREÇÃO DEFINITIVA para o campo para_emprestimo
+        const paraEmprestimoValue = equipment.para_emprestimo;
+        console.log('🔧 Valor de para_emprestimo:', paraEmprestimoValue, typeof paraEmprestimoValue);
+
+        let paraEmprestimoBool;
+
+        if (typeof paraEmprestimoValue === 'boolean') {
+            paraEmprestimoBool = paraEmprestimoValue;
+        } else if (typeof paraEmprestimoValue === 'string') {
+            paraEmprestimoBool = (paraEmprestimoValue.toLowerCase() === 'true' || paraEmprestimoValue.toLowerCase() === 'sim' || paraEmprestimoValue === '1');
+        } else if (typeof paraEmprestimoValue === 'number') {
+            paraEmprestimoBool = (paraEmprestimoValue === 1);
+        } else if (paraEmprestimoValue === null || paraEmprestimoValue === undefined) {
+            paraEmprestimoBool = true; // Default
+        } else {
+            paraEmprestimoBool = Boolean(paraEmprestimoValue);
+        }
+
+        const paraEmprestimoString = paraEmprestimoBool ? 'true' : 'false';
+        console.log('🔧 Valor convertido para select:', paraEmprestimoString);
+
+        // Forçar a atualização do select
+        elements.para_emprestimo.value = paraEmprestimoString;
+
+        // Disparar eventos para garantir que o select seja atualizado
+        elements.para_emprestimo.dispatchEvent(new Event('change', { bubbles: true }));
+        elements.para_emprestimo.dispatchEvent(new Event('input', { bubbles: true }));
+
+        console.log('✅ Campos preenchidos com sucesso!');
+        console.log('📋 Valores finais:', {
+            tipo_device: elements.tipo_device.value,
+            numero_serie: elements.numero_serie.value,
+            modelo: elements.modelo.value,
+            status: elements.status.value,
+            para_emprestimo: elements.para_emprestimo.value
+        });
+    }
+
+    // Excluir equipment
+    function excluirEquipment(equipmentId, equipmentName) {
+        if (confirm(`Tem certeza que deseja excluir o equipment "${equipmentName}"? Esta ação não pode ser desfeita.`)) {
+            fetch(`/api/equipment-control/${equipmentId}`, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        loadEquipmentFromAPI(); // Recarregar a lista
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao excluir equipment. Verifique o console para mais detalhes.');
+                });
+        }
+    }
+
+    // Download template - CORRIGIDA
+    function downloadTemplate() {
+        window.open('/api/export/template-equipment-control', '_blank');
+    }
+
+    // Exportar dados
+    function exportEquipmentData() {
+        window.open('/api/export/equipment-control', '_blank');
+    }
+
+    // Importar equipments
+    document.getElementById('formImportar').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        fetch('/api/importar/equipment-control', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    let message = result.message;
+                    if (result.detalhes && result.detalhes.erros && result.detalhes.erros.length > 0) {
+                        message += '\n\nErros encontrados:\n' + result.detalhes.erros.join('\n');
+                    }
+                    alert(message);
+
+                    closeModal('modalImportar');
+
+                    if (result.detalhes && result.detalhes.sucessos > 0) {
+                        loadEquipmentFromAPI(); // Recarregar a lista
+                    }
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro na importação. Verifique o console para mais detalhes.');
+            });
+    });
+
+    // =============================================================================
+    // FUNÇÕES DE SELEÇÃO MÚLTIPLA
+    // =============================================================================
+
+    // Alternar seleção de um equipment
+    function toggleEquipmentSelection(equipmentId) {
+        if (selectedEquipmentIds.has(equipmentId)) {
+            selectedEquipmentIds.delete(equipmentId);
+        } else {
+            selectedEquipmentIds.add(equipmentId);
+        }
+        updateDeleteButton();
+        updateSelectAllCheckbox();
+    }
+
+    // Selecionar ou desselecionar todos os equipments da página atual
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.getElementsByClassName('equipment-checkbox');
+        const currentEquipment = filteredEquipment.slice(
+            (currentPage - 1) * itemsPerPage,
+            currentPage * itemsPerPage
+        );
+
+        if (checkbox.checked) {
+            currentEquipment.forEach(equipment => {
+                selectedEquipmentIds.add(equipment.id);
+            });
+        } else {
+            currentEquipment.forEach(equipment => {
+                selectedEquipmentIds.delete(equipment.id);
+            });
+        }
+
+        // Atualizar checkboxes visíveis
+        Array.from(checkboxes).forEach(cb => {
+            cb.checked = checkbox.checked;
+        });
+
+        updateDeleteButton();
+    }
+
+    // Atualizar o estado do checkbox "Selecionar Todos"
+    function updateSelectAllCheckbox() {
+        const selectAllCheckbox = document.getElementById('selectAll');
+        if (!selectAllCheckbox) return;
+
+        const currentEquipment = filteredEquipment.slice(
+            (currentPage - 1) * itemsPerPage,
+            currentPage * itemsPerPage
+        );
+
+        if (currentEquipment.length === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            return;
+        }
+
+        const selectedCount = currentEquipment.filter(equipment =>
+            selectedEquipmentIds.has(equipment.id)
+        ).length;
+
+        if (selectedCount === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        } else if (selectedCount === currentEquipment.length) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+        }
+    }
+
+    // Atualizar visibilidade do botão de deletar selecionados
+    function updateDeleteButton() {
+        const btnDeleteSelected = document.getElementById('btnDeleteSelected');
+        const selectedCount = document.getElementById('selectedCount');
+
+        if (selectedEquipmentIds.size > 0) {
+            btnDeleteSelected.style.display = 'block';
+            selectedCount.textContent = selectedEquipmentIds.size;
+        } else {
+            btnDeleteSelected.style.display = 'none';
+        }
+    }
+
+    // Deletar equipments selecionados
+    function deleteSelected() {
+        if (selectedEquipmentIds.size === 0) {
+            alert('Nenhum equipment selecionado!');
+            return;
+        }
+
+        const equipmentCount = selectedEquipmentIds.size;
+        if (!confirm(`Tem certeza que deseja excluir ${equipmentCount} equipment(s) selecionado(s)? Esta ação não pode ser desfeita.`)) {
+            return;
+        }
+
+        const equipmentIds = Array.from(selectedEquipmentIds);
+
+        fetch('/api/equipment-control/delete-multiple', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ids: equipmentIds })
+        })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    selectedEquipmentIds.clear();
+                    loadEquipmentFromAPI(); // Recarregar a lista
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao excluir equipments. Verifique o console para mais detalhes.');
+            });
+    }
+</script>
+
+<style>
+    .page-item.active .page-link {
+        background-color: #000000;
+        border-color: #000000;
+    }
+
+    .page-link {
+        color: #000000;
+    }
+
+    .page-link:hover {
+        color: #000000;
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+
+    .pagination {
+        margin-bottom: 0;
+    }
+
+    .equipment-checkbox {
+        cursor: pointer;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.075);
+    }
+</style>
+{% endblock %}

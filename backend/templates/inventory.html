@@ -1,0 +1,778 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Inventário</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-apple-outline me-2" onclick="downloadTemplate('inventory')">
+            <i class="fas fa-download me-2"></i>Baixar Template
+        </button>
+        <button type="button" class="btn btn-apple-outline me-2" data-bs-toggle="modal"
+            data-bs-target="#modalImportInventory">
+            <i class="fas fa-file-import me-2"></i>Importar
+        </button>
+        <button type="button" class="btn btn-apple-outline me-2" onclick="exportInventoryData()">
+            <i class="fas fa-file-export me-2"></i>Exportar XLSX
+        </button>
+        <button type="button" class="btn btn-apple" onclick="abrirModalInventory()">
+            <i class="fas fa-plus me-2"></i>Novo Item
+        </button>
+        <button type="button" class="btn btn-danger ms-2" id="btnDeleteSelectedInventory" style="display: none;"
+            onclick="deleteSelectedInventory()">
+            <i class="fas fa-trash me-2"></i>Deletar Selecionados (<span id="inventorySelectedCount">0</span>)
+        </button>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Buscar no inventário</label>
+                <div class="input-group">
+                    <input type="text" id="searchInventory" class="form-control"
+                        placeholder="Buscar por tombamento, equipamento ou local">
+                    <button class="btn btn-apple-outline" type="button" onclick="filterInventory()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Etiquetado</label>
+                <select class="form-select" id="filterEtiquetado" onchange="filterInventory()">
+                    <option value="">Todos</option>
+                    <option value="true">Etiquetado</option>
+                    <option value="false">Sem etiqueta</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Itens por página</label>
+                <select class="form-select" id="inventoryItemsPerPage" onchange="changeInventoryItemsPerPage()">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th width="50">
+                            <input type="checkbox" id="selectAllInventory" onchange="toggleSelectAllInventory(this)">
+                        </th>
+                        <th>Tombamento</th>
+                        <th>Equipamento</th>
+                        <th>Carga</th>
+                        <th>Local</th>
+                        <th>Etiquetado</th>
+                        <th>Data Cadastro</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Carregando inventário...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <nav aria-label="Paginação inventário">
+            <ul class="pagination justify-content-center" id="inventoryPagination"></ul>
+        </nav>
+
+        <div class="text-center text-muted mt-2">
+            <small id="inventoryPageInfo">Mostrando 0 de 0 itens</small>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Inventário -->
+<div class="modal fade" id="modalInventory" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalInventoryTitle">Cadastrar Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formInventory">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" id="inventory_id" name="inventory_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Coluna 1 -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Device (Opcional)</label>
+                                <select class="form-select" id="selectDevice" onchange="preencherDadosDevice()">
+                                    <option value="">Selecione um device...</option>
+                                </select>
+                                <div class="form-text">Selecione um device para preencher automaticamente</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Tombamento *</label>
+                                <input type="text" class="form-control" id="tombamento" name="tombamento" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Equipamento *</label>
+                                <input type="text" class="form-control" id="equipamento" name="equipamento" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Carga</label>
+                                <input type="text" class="form-control" id="carga" name="carga">
+                            </div>
+                        </div>
+
+                        <!-- Coluna 2 -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Local</label>
+                                <input type="text" class="form-control" id="local" name="local">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Etiquetado *</label>
+                                <select class="form-select" id="etiquetado" name="etiquetado" required>
+                                    <option value="true">Sim</option>
+                                    <option value="false">Não</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">* Campos obrigatórios</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-save me-2"></i>Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Importar Inventário -->
+<div class="modal fade" id="modalImportInventory" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importar Inventário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formImportInventory" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Selecione o arquivo</label>
+                        <input type="file" class="form-control" name="file" accept=".xlsx,.xls,.csv" required>
+                        <div class="form-text">
+                            Formatos suportados: Excel (.xlsx, .xls) ou CSV (.csv)
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">Estrutura esperada:</h6>
+                        <small>
+                            <strong>Obrigatórios:</strong> tombamento, equipamento<br>
+                            <strong>Opcionais:</strong> carga, local, etiquetado<br>
+                            <strong>Etiquetado:</strong> "Sim"/"Não" ou True/False
+                        </small>
+                    </div>
+                    <div class="text-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm"
+                            onclick="downloadTemplate('inventory')">
+                            <i class="fas fa-download me-1"></i>Baixar Template
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-upload me-2"></i>Importar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let inventoryItems = [];
+    let filteredInventoryItems = [];
+    let inventoryCurrentPage = 1;
+    let inventoryItemsPerPage = 10;
+    let selectedInventoryIds = new Set();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadInventory();
+        document.getElementById('searchInventory').addEventListener('input', filterInventory);
+        carregarDevices();
+    });
+
+    // Carregar devices para o select
+    function carregarDevices() {
+        fetch('/api/devices')
+            .then(response => response.json())
+            .then(result => {
+                const select = document.getElementById('selectDevice');
+                if (result && result.length > 0) {
+                    select.innerHTML = '<option value="">Selecione um device...</option>';
+                    result.forEach(device => {
+                        const label = device.nome ? `${device.nome} (${device.tipo}) - ${device.numero_serie}` : `${device.tipo} - ${device.numero_serie}`;
+                        select.innerHTML += `<option value="${device.id}" data-device='${JSON.stringify(device)}'>${label}</option>`;
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar devices:', error);
+            });
+    }
+
+    // Preencher dados do device selecionado
+    function preencherDadosDevice() {
+        const select = document.getElementById('selectDevice');
+        const selectedOption = select.options[select.selectedIndex];
+
+        if (!selectedOption || !selectedOption.value) {
+            return;
+        }
+
+        try {
+            const device = JSON.parse(selectedOption.getAttribute('data-device'));
+
+            // Preencher campos com dados do device
+            document.getElementById('equipamento').value = device.nome || device.tipo || '';
+
+            // Se o tombamento estiver vazio, pode usar o número de série
+            if (!document.getElementById('tombamento').value && device.numero_serie) {
+                document.getElementById('tombamento').value = device.numero_serie;
+            }
+        } catch (error) {
+            console.error('Erro ao preencher dados do device:', error);
+        }
+    }
+
+    function loadInventory() {
+        fetch('/api/inventory')
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    inventoryItems = result.data;
+                    filteredInventoryItems = [...inventoryItems];
+                    renderInventoryTable();
+                } else {
+                    alert(result.message || 'Erro ao carregar inventário');
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Erro ao carregar inventário. Verifique o console.');
+            });
+    }
+
+    function filterInventory() {
+        const searchTerm = document.getElementById('searchInventory').value.toLowerCase().trim();
+        const etiquetadoFilter = document.getElementById('filterEtiquetado').value;
+
+        filteredInventoryItems = inventoryItems.filter(item => {
+            const matchesSearch =
+                (item.tombamento && item.tombamento.toLowerCase().includes(searchTerm)) ||
+                (item.equipamento && item.equipamento.toLowerCase().includes(searchTerm)) ||
+                (item.local && item.local.toLowerCase().includes(searchTerm));
+
+            let matchesEtiquetado = true;
+            if (etiquetadoFilter) {
+                const isEtiquetado = item.etiquetado === true || item.etiquetado === 'true';
+                matchesEtiquetado = etiquetadoFilter === 'true' ? isEtiquetado : !isEtiquetado;
+            }
+
+            return matchesSearch && matchesEtiquetado;
+        });
+
+        inventoryCurrentPage = 1;
+        renderInventoryTable();
+    }
+
+    function changeInventoryItemsPerPage() {
+        inventoryItemsPerPage = parseInt(document.getElementById('inventoryItemsPerPage').value, 10);
+        inventoryCurrentPage = 1;
+        renderInventoryTable();
+    }
+
+    function renderInventoryTable() {
+        const startIndex = (inventoryCurrentPage - 1) * inventoryItemsPerPage;
+        const endIndex = startIndex + inventoryItemsPerPage;
+        const currentItems = filteredInventoryItems.slice(startIndex, endIndex);
+        const tbody = document.getElementById('inventoryTableBody');
+        tbody.innerHTML = '';
+
+        if (currentItems.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
+                    Nenhum item encontrado
+                </td>
+            </tr>
+        `;
+        } else {
+            currentItems.forEach(item => {
+                const isChecked = selectedInventoryIds.has(item.id);
+                tbody.innerHTML += `
+                <tr>
+                    <td>
+                        <input type="checkbox" class="inventory-checkbox" value="${item.id}" ${isChecked ? 'checked' : ''} onchange="toggleInventorySelection(${item.id})">
+                    </td>
+                    <td><strong>${escapeHtml(item.tombamento)}</strong></td>
+                    <td>${escapeHtml(item.equipamento)}</td>
+                    <td>${escapeHtml(item.carga) || '-'}</td>
+                    <td>${escapeHtml(item.local) || '-'}</td>
+                    <td>
+                        <span class="badge ${item.etiquetado ? 'bg-success' : 'bg-secondary'}">
+                            ${item.etiquetado ? 'Sim' : 'Não'}
+                        </span>
+                    </td>
+                    <td>${item.data_cadastro || '-'}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-apple-outline" onclick="editarInventory(${item.id})">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="excluirInventory(${item.id}, '${escapeHtml(item.tombamento)}')">
+                                <i class="fas fa-trash me-1"></i>Excluir
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            });
+        }
+
+        renderInventoryPagination();
+        updateInventoryPageInfo();
+        updateSelectAllInventoryCheckbox();
+        updateInventoryDeleteButton();
+    }
+
+    function renderInventoryPagination() {
+        const totalPages = Math.ceil(filteredInventoryItems.length / inventoryItemsPerPage) || 1;
+        const pagination = document.getElementById('inventoryPagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${inventoryCurrentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changeInventoryPage(${inventoryCurrentPage - 1}); return false;" aria-label="Anterior">
+            <span aria-hidden="true">&laquo;</span>
+        </a>`;
+        pagination.appendChild(prevLi);
+
+        const startPage = Math.max(1, inventoryCurrentPage - 2);
+        const endPage = Math.min(totalPages, inventoryCurrentPage + 2);
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === inventoryCurrentPage ? 'active' : ''}`;
+            pageLi.innerHTML = `<a class="page-link" href="#" onclick="changeInventoryPage(${i}); return false;">${i}</a>`;
+            pagination.appendChild(pageLi);
+        }
+
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${inventoryCurrentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changeInventoryPage(${inventoryCurrentPage + 1}); return false;" aria-label="Próximo">
+            <span aria-hidden="true">&raquo;</span>
+        </a>`;
+        pagination.appendChild(nextLi);
+    }
+
+    function changeInventoryPage(page) {
+        const totalPages = Math.ceil(filteredInventoryItems.length / inventoryItemsPerPage) || 1;
+        if (page < 1 || page > totalPages) return;
+        inventoryCurrentPage = page;
+        renderInventoryTable();
+        document.querySelector('.card-body').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateInventoryPageInfo() {
+        const startIndex = filteredInventoryItems.length === 0 ? 0 : (inventoryCurrentPage - 1) * inventoryItemsPerPage + 1;
+        const endIndex = Math.min(inventoryCurrentPage * inventoryItemsPerPage, filteredInventoryItems.length);
+        document.getElementById('inventoryPageInfo').textContent =
+            `Mostrando ${startIndex} a ${endIndex} de ${filteredInventoryItems.length} itens`;
+    }
+
+    document.getElementById('formInventory').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const payload = {
+            tombamento: formData.get('tombamento'),
+            equipamento: formData.get('equipamento'),
+            carga: formData.get('carga'),
+            local: formData.get('local'),
+            etiquetado: formData.get('etiquetado') === 'true'
+        };
+
+        const itemId = formData.get('inventory_id');
+        const url = itemId ? `/api/inventory/${itemId}` : '/api/inventory';
+        const method = itemId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalInventory'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    document.getElementById('formInventory').reset();
+                    document.getElementById('inventory_id').value = '';
+                    document.getElementById('selectDevice').value = '';
+                    document.getElementById('modalInventoryTitle').textContent = 'Cadastrar Item';
+                    loadInventory();
+                } else {
+                    alert(result.message);
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Erro ao salvar item.');
+            });
+    });
+
+    document.getElementById('modalInventory').addEventListener('hidden.bs.modal', () => {
+        // Resetar apenas se não estiver editando
+        if (!document.getElementById('inventory_id').value) {
+            document.getElementById('formInventory').reset();
+            document.getElementById('inventory_id').value = '';
+            document.getElementById('selectDevice').value = '';
+            document.getElementById('modalInventoryTitle').textContent = 'Cadastrar Item';
+        }
+    });
+
+    function abrirModalInventory() {
+        document.getElementById('formInventory').reset();
+        document.getElementById('inventory_id').value = '';
+        document.getElementById('selectDevice').value = '';
+        document.getElementById('modalInventoryTitle').textContent = 'Cadastrar Item';
+        new bootstrap.Modal(document.getElementById('modalInventory')).show();
+    }
+
+    function editarInventory(id) {
+        console.log('🔍 Buscando item do inventário com ID:', id);
+
+        fetch(`/api/inventory/${id}`)
+            .then(response => {
+                console.log('📥 Resposta da API:', response.status);
+                if (!response.ok) {
+                    throw new Error('Erro na resposta da API: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(result => {
+                console.log('📦 Dados recebidos:', result);
+                if (result.success) {
+                    const item = result.data;
+                    console.log('🔧 Item data:', item);
+
+                    // Mudar título do modal
+                    document.getElementById('modalInventoryTitle').textContent = 'Editar Item';
+
+                    // Abrir o modal primeiro
+                    const modalElement = document.getElementById('modalInventory');
+                    const modal = new bootstrap.Modal(modalElement);
+
+                    // Preencher os campos quando o modal estiver completamente aberto
+                    modalElement.addEventListener('shown.bs.modal', function fillModalOnce() {
+                        console.log('✅ Modal completamente aberto, preenchendo campos...');
+                        fillInventoryFormFields(item);
+                        // Remover o listener após usar uma vez
+                        modalElement.removeEventListener('shown.bs.modal', fillModalOnce);
+                    }, { once: true });
+
+                    // Abrir o modal
+                    modal.show();
+
+                } else {
+                    console.error('❌ Erro na resposta da API:', result.message);
+                    alert('Erro ao carregar item: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro ao carregar item:', error);
+                alert('Erro ao carregar item. Verifique o console para mais detalhes.');
+            });
+    }
+
+    // Função separada para preencher os campos do formulário
+    function fillInventoryFormFields(item) {
+        console.log('🔧 Preenchendo campos com dados:', item);
+
+        // Verificar se os elementos existem antes de preencher
+        const elements = {
+            inventory_id: document.getElementById('inventory_id'),
+            tombamento: document.getElementById('tombamento'),
+            equipamento: document.getElementById('equipamento'),
+            carga: document.getElementById('carga'),
+            local: document.getElementById('local'),
+            etiquetado: document.getElementById('etiquetado'),
+            selectDevice: document.getElementById('selectDevice')
+        };
+
+        // Verificar se todos os elementos existem
+        for (const [key, element] of Object.entries(elements)) {
+            if (!element) {
+                console.error(`❌ Elemento não encontrado: ${key}`);
+                return;
+            }
+        }
+
+        // Preencher campos (tratando valores nulos e NaN)
+        elements.inventory_id.value = item.id || '';
+        elements.tombamento.value = (item.tombamento && item.tombamento !== 'nan') ? item.tombamento : '';
+        elements.equipamento.value = (item.equipamento && item.equipamento !== 'nan') ? item.equipamento : '';
+        elements.carga.value = (item.carga && item.carga !== 'nan') ? item.carga : '';
+        elements.local.value = (item.local && item.local !== 'nan' && item.local !== 'None') ? item.local : '';
+
+        // Tratar etiquetado (pode ser boolean, string ou número)
+        let etiquetadoValue = false;
+        if (typeof item.etiquetado === 'boolean') {
+            etiquetadoValue = item.etiquetado;
+        } else if (typeof item.etiquetado === 'string') {
+            etiquetadoValue = item.etiquetado.toLowerCase() === 'true' || item.etiquetado === '1' || item.etiquetado === 'Sim';
+        } else if (typeof item.etiquetado === 'number') {
+            etiquetadoValue = item.etiquetado === 1;
+        }
+        elements.etiquetado.value = etiquetadoValue ? 'true' : 'false';
+
+        elements.selectDevice.value = ''; // Resetar seleção de device
+
+        console.log('✅ Campos preenchidos com sucesso!');
+        console.log('📋 Valores finais:', {
+            tombamento: elements.tombamento.value,
+            equipamento: elements.equipamento.value,
+            carga: elements.carga.value,
+            local: elements.local.value,
+            etiquetado: elements.etiquetado.value
+        });
+    }
+
+    function excluirInventory(id, tombamento) {
+        if (!confirm(`Confirma excluir o item ${tombamento}?`)) return;
+
+        fetch(`/api/inventory/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    selectedInventoryIds.delete(id);
+                    loadInventory();
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Erro ao excluir item.');
+            });
+    }
+
+    document.getElementById('formImportInventory').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        fetch('/api/importar/inventory', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    let message = result.message;
+                    if (result.detalhes && result.detalhes.erros && result.detalhes.erros.length > 0) {
+                        message += '\n\nErros:\n' + result.detalhes.erros.join('\n');
+                    }
+                    alert(message);
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportInventory'));
+                    modal.hide();
+                    if (result.detalhes && result.detalhes.sucessos > 0) {
+                        loadInventory();
+                    }
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Erro na importação.');
+            });
+    });
+
+    function toggleInventorySelection(id) {
+        if (selectedInventoryIds.has(id)) {
+            selectedInventoryIds.delete(id);
+        } else {
+            selectedInventoryIds.add(id);
+        }
+        updateInventoryDeleteButton();
+        updateSelectAllInventoryCheckbox();
+    }
+
+    function toggleSelectAllInventory(masterCheckbox) {
+        const currentItems = filteredInventoryItems.slice(
+            (inventoryCurrentPage - 1) * inventoryItemsPerPage,
+            inventoryCurrentPage * inventoryItemsPerPage
+        );
+
+        if (masterCheckbox.checked) {
+            currentItems.forEach(item => selectedInventoryIds.add(item.id));
+        } else {
+            currentItems.forEach(item => selectedInventoryIds.delete(item.id));
+        }
+
+        document.querySelectorAll('.inventory-checkbox').forEach(cb => cb.checked = masterCheckbox.checked);
+        updateInventoryDeleteButton();
+        updateSelectAllInventoryCheckbox();
+    }
+
+    function updateSelectAllInventoryCheckbox() {
+        const masterCheckbox = document.getElementById('selectAllInventory');
+        if (!masterCheckbox) return;
+
+        const currentItems = filteredInventoryItems.slice(
+            (inventoryCurrentPage - 1) * inventoryItemsPerPage,
+            inventoryCurrentPage * inventoryItemsPerPage
+        );
+
+        if (currentItems.length === 0) {
+            masterCheckbox.checked = false;
+            masterCheckbox.indeterminate = false;
+            return;
+        }
+
+        const selectedCount = currentItems.filter(item => selectedInventoryIds.has(item.id)).length;
+        if (selectedCount === 0) {
+            masterCheckbox.checked = false;
+            masterCheckbox.indeterminate = false;
+        } else if (selectedCount === currentItems.length) {
+            masterCheckbox.checked = true;
+            masterCheckbox.indeterminate = false;
+        } else {
+            masterCheckbox.checked = false;
+            masterCheckbox.indeterminate = true;
+        }
+    }
+
+    function updateInventoryDeleteButton() {
+        const btn = document.getElementById('btnDeleteSelectedInventory');
+        const countEl = document.getElementById('inventorySelectedCount');
+        if (selectedInventoryIds.size > 0) {
+            btn.style.display = 'block';
+            countEl.textContent = selectedInventoryIds.size;
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+
+    function deleteSelectedInventory() {
+        if (selectedInventoryIds.size === 0) {
+            alert('Nenhum item selecionado!');
+            return;
+        }
+
+        if (!confirm(`Excluir ${selectedInventoryIds.size} item(ns) selecionado(s)?`)) {
+            return;
+        }
+
+        fetch('/api/inventory/delete-multiple', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ ids: Array.from(selectedInventoryIds) })
+        })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    selectedInventoryIds.clear();
+                    loadInventory();
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Erro ao excluir itens.');
+            });
+    }
+
+    function exportInventoryData() {
+        window.open('/api/export/inventory', '_blank');
+    }
+
+    function downloadTemplate(tipo) {
+        window.open(`/api/download/template/${tipo}`, '_blank');
+    }
+
+    function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return '';
+        return unsafe
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+
+<style>
+    .page-item.active .page-link {
+        background-color: #000000;
+        border-color: #000000;
+    }
+
+    .page-link {
+        color: #000000;
+    }
+
+    .page-link:hover {
+        color: #000000;
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+
+    .inventory-checkbox {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}

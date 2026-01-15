@@ -1,0 +1,1114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Gerenciamento de Devices</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if current_user.role == 'admin' %}
+        <button type="button" class="btn btn-danger" id="btnDeleteSelectedDevices" style="display: none;"
+            onclick="deleteSelectedDevices()">
+            <i class="fas fa-trash me-2"></i>Deletar Selecionados (<span id="devicesSelectedCount">0</span>)
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Abas -->
+<ul class="nav nav-tabs mb-4" id="deviceTabs">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#todos">Todos</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#mac">Mac</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#ipad">iPad</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#iphone">iPhone</a>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="todos">
+        <!-- Filtros e Busca -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="searchDevice"
+                        placeholder="Buscar por tipo, modelo, número de série...">
+                    <button class="btn btn-apple-outline" type="button" onclick="filterDevices()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="filterStatus">
+                    <option value="">Todos os status</option>
+                    <option value="Disponível">Disponível</option>
+                    <option value="Emprestado">Emprestado</option>
+                    <option value="Manutenção">Manutenção</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="itemsPerPage" onchange="changeItemsPerPage()">
+                    <option value="10">10 por página</option>
+                    <option value="20">20 por página</option>
+                    <option value="50">50 por página</option>
+                    <option value="100">100 por página</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabela de Devices -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                {% if current_user.role == 'admin' %}
+                                <th width="50">
+                                    <input type="checkbox" id="selectAllDevices"
+                                        onchange="toggleSelectAllDevices(this)">
+                                </th>
+                                {% endif %}
+                                <th>Tipo</th>
+                                <th>Modelo</th>
+                                <th>Nome</th>
+                                <th>Número de Série</th>
+                                <th>Status</th>
+                                <th>Para Empréstimo</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="devicesTableBody">
+                            <!-- Os devices serão carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginação -->
+                <nav aria-label="Navegação de páginas">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- A paginação será gerada via JavaScript -->
+                    </ul>
+                </nav>
+
+                <!-- Informações da página -->
+                <div class="text-center text-muted mt-2">
+                    <small id="pageInfo">Mostrando 0 de 0 devices</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aba Mac -->
+    <div class="tab-pane fade" id="mac">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Modelo</th>
+                        <th>Nome</th>
+                        <th>Número de Série</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for device in devices %}
+                    {% if device.tipo in ['Macbook', 'Mac Mini'] %}
+                    <tr>
+                        <td>{{ device.modelo or '-' }}</td>
+                        <td>{{ device.nome or '-' }}</td>
+                        <td><code>{{ device.numero_serie }}</code></td>
+                        <td>
+                            <span
+                                class="badge {% if device.status == 'Disponível' %}bg-success{% elif device.status == 'Emprestado' %}bg-warning{% else %}bg-danger{% endif %}">
+                                {{ device.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-apple-outline" onclick="editarDevice({{ device.id }})">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </button>
+                                <button class="btn btn-outline-danger"
+                                    onclick="excluirDevice({{ device.id }}, {{ device.nome|tojson }})">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Aba iPad -->
+    <div class="tab-pane fade" id="ipad">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Modelo</th>
+                        <th>Nome</th>
+                        <th>Número de Série</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for device in devices %}
+                    {% if device.tipo == 'iPad' %}
+                    <tr>
+                        <td>{{ device.modelo or '-' }}</td>
+                        <td>{{ device.nome or '-' }}</td>
+                        <td><code>{{ device.numero_serie }}</code></td>
+                        <td>
+                            <span
+                                class="badge {% if device.status == 'Disponível' %}bg-success{% elif device.status == 'Emprestado' %}bg-warning{% else %}bg-danger{% endif %}">
+                                {{ device.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-apple-outline" onclick="editarDevice({{ device.id }})">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </button>
+                                <button class="btn btn-outline-danger"
+                                    onclick="excluirDevice({{ device.id }}, {{ device.nome|tojson }})">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Aba iPhone -->
+    <div class="tab-pane fade" id="iphone">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Modelo</th>
+                        <th>Nome</th>
+                        <th>Número de Série</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for device in devices %}
+                    {% if device.tipo == 'iPhone' %}
+                    <tr>
+                        <td>{{ device.modelo or '-' }}</td>
+                        <td>{{ device.nome or '-' }}</td>
+                        <td><code>{{ device.numero_serie }}</code></td>
+                        <td>
+                            <span
+                                class="badge {% if device.status == 'Disponível' %}bg-success{% elif device.status == 'Emprestado' %}bg-warning{% else %}bg-danger{% endif %}">
+                                {{ device.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-apple-outline" onclick="editarDevice({{ device.id }})">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </button>
+                                <button class="btn btn-outline-danger"
+                                    onclick="excluirDevice({{ device.id }}, {{ device.nome|tojson }})">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Device CORRIGIDO COM OBSERVAÇÃO -->
+<div class="modal fade" id="modalDevice" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalDeviceTitle">Cadastrar Device</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formDevice">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="device_id" id="device_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo de Device *</label>
+                            <select class="form-select" name="tipo" id="selectTipoDevice" required>
+                                <option value="">Carregando tipos...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Número de Série *</label>
+                            <input type="text" class="form-control" name="numero_serie" id="numero_serie_device"
+                                required>
+                        </div>
+                    </div>
+
+                    <!-- Campos para Mac -->
+                    <div id="camposMac" class="campos-tipo" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" class="form-control" name="modelo" id="modelo_mac">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Cor</label>
+                                <input type="text" class="form-control" name="cor" id="cor_mac">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Polegadas</label>
+                                <input type="text" class="form-control" name="polegadas" id="polegadas_mac">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Ano</label>
+                                <input type="number" class="form-control" name="ano" id="ano_mac" min="2000" max="2030">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Chip</label>
+                                <input type="text" class="form-control" name="chip" id="chip_mac">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Memória</label>
+                                <input type="text" class="form-control" name="memoria" id="memoria_mac">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nome</label>
+                                <input type="text" class="form-control" name="nome" id="nome_mac">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">macOS</label>
+                                <input type="text" class="form-control" name="versao_os" id="versao_os_mac">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos para iOS (iPhone/iPad) -->
+                    <div id="camposIos" class="campos-tipo" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" class="form-control" name="modelo" id="modelo_ios">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Cor</label>
+                                <input type="text" class="form-control" name="cor" id="cor_ios">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nome</label>
+                                <input type="text" class="form-control" name="nome" id="nome_ios">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Versão do iOS/iPadOS</label>
+                                <input type="text" class="form-control" name="versao_os" id="versao_os_ios">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos para Apple Watch/Vision Pro -->
+                    <div id="camposWearables" class="campos-tipo" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Modelo</label>
+                                <input type="text" class="form-control" name="modelo" id="modelo_wear">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Cor</label>
+                                <input type="text" class="form-control" name="cor" id="cor_wear">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nome</label>
+                                <input type="text" class="form-control" name="nome" id="nome_wear">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Versão do Software</label>
+                                <input type="text" class="form-control" name="versao_os" id="versao_os_wear">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status *</label>
+                            <select class="form-select" name="status" id="status_device" required>
+                                <option value="Disponível" selected>Disponível</option>
+                                <option value="Emprestado">Emprestado</option>
+                                <option value="Manutenção">Manutenção</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Para Empréstimo *</label>
+                            <select class="form-select" name="para_emprestimo" id="para_emprestimo_device" required>
+                                <option value="true" selected>Sim</option>
+                                <option value="false">Não</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Campo Observação ADICIONADO -->
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Observação</label>
+                            <textarea class="form-control" name="observacao" id="observacao_device" rows="3"
+                                placeholder="Adicione observações sobre o device (condição, acessórios, problemas conhecidos, etc.)"></textarea>
+                            <div class="form-text">
+                                Use este campo para anotações importantes sobre o device.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">* Campos obrigatórios</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-save me-2"></i>Salvar Device
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Dados JSON dos devices passados do backend -->
+<div id="devicesData" data-devices='{{ devices_json | safe }}' style="display: none;"></div>
+
+<script>
+    // Variáveis globais para paginação
+    let currentPage = 1;
+    let itemsPerPage = 10;
+    let allDevices = [];
+    let filteredDevices = [];
+    let selectedDeviceIds = new Set();
+    const canBulkDeleteDevices = {{ 'true' if current_user.role == 'admin' else 'false' }};
+
+    // Inicializar quando o DOM estiver carregado
+    document.addEventListener('DOMContentLoaded', function () {
+        loadAllDevices();
+        setupEventListeners();
+        carregarTiposDevices();
+        setupModalEvents();
+    });
+
+    // Configurar eventos dos modais
+    function setupModalEvents() {
+        // Limpar formulário quando modal for fechado
+        const modalDevice = document.getElementById('modalDevice');
+        if (modalDevice) {
+            modalDevice.addEventListener('hidden.bs.modal', function () {
+                limparFormularioDevice();
+            });
+        }
+    }
+
+
+    // Função para limpar formulário
+    function limparFormularioDevice() {
+        document.getElementById('formDevice').reset();
+        document.getElementById('device_id').value = '';
+        document.getElementById('modalDeviceTitle').textContent = 'Cadastrar Device';
+
+        // Esconder todos os campos específicos
+        document.querySelectorAll('.campos-tipo').forEach(div => {
+            div.style.display = 'none';
+        });
+    }
+
+    function setupEventListeners() {
+        // Busca em tempo real
+        document.getElementById('searchDevice').addEventListener('input', filterDevices);
+
+        // Filtro por status
+        document.getElementById('filterStatus').addEventListener('change', filterDevices);
+
+        // Mostrar campos específicos baseados no tipo
+        document.getElementById('selectTipoDevice').addEventListener('change', function () {
+            const tipo = this.value || '';
+            const tipoLower = tipo.toLowerCase();
+
+            // Esconder todos os campos
+            document.querySelectorAll('.campos-tipo').forEach(div => {
+                div.style.display = 'none';
+            });
+
+            // Mostrar campos específicos baseados na categoria
+            if (tipoLower.includes('mac') || tipoLower.includes('macbook') || tipoLower.includes('mac mini')) {
+                const camposMac = document.getElementById('camposMac');
+                if (camposMac) camposMac.style.display = 'block';
+            } else if (tipoLower.includes('iphone') || tipoLower.includes('ipad')) {
+                const camposIos = document.getElementById('camposIos');
+                if (camposIos) camposIos.style.display = 'block';
+            } else if (tipoLower.includes('watch') || tipoLower.includes('vision')) {
+                const camposWear = document.getElementById('camposWearables');
+                if (camposWear) camposWear.style.display = 'block';
+            }
+        });
+    }
+
+    // Carregar tipos de devices do sistema
+    function carregarTiposDevices() {
+        fetch('/api/tipos-devices/lista')
+            .then(response => response.json())
+            .then(result => {
+                const select = document.getElementById('selectTipoDevice');
+                if (result.success) {
+                    select.innerHTML = '<option value="">Selecione o tipo...</option>';
+                    result.data.forEach(tipo => {
+                        select.innerHTML += `<option value="${tipo.nome}">${tipo.nome} (${tipo.categoria})</option>`;
+                    });
+                } else {
+                    select.innerHTML = '<option value="">Erro ao carregar tipos</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar tipos:', error);
+                const select = document.getElementById('selectTipoDevice');
+                select.innerHTML = '<option value="">Erro ao carregar tipos</option>';
+            });
+    }
+
+    // Carregar todos os devices
+    function loadAllDevices() {
+        const devicesDataElement = document.getElementById('devicesData');
+        try {
+            const devicesJson = devicesDataElement.dataset.devices;
+            allDevices = JSON.parse(devicesJson);
+            console.log('DEBUG: Total de devices carregados:', allDevices.length);
+            if (allDevices.length > 0) {
+                console.log('DEBUG: Primeiro device:', allDevices[0]);
+            }
+        } catch (e) {
+            console.error('Erro ao parsear devices JSON:', e);
+            allDevices = [];
+        }
+
+        filteredDevices = [...allDevices];
+        selectedDeviceIds.clear();
+        renderTable();
+    }
+
+    // Filtrar devices
+    function filterDevices() {
+        const searchTerm = document.getElementById('searchDevice').value.toLowerCase().trim();
+        const statusFilter = document.getElementById('filterStatus').value;
+
+        filteredDevices = allDevices.filter(device => {
+            // Busca por número de série (busca exata ou parcial - prioridade)
+            const numeroSerieMatch = device.numero_serie &&
+                device.numero_serie.toLowerCase().includes(searchTerm);
+
+            // Busca em outros campos
+            const matchesSearch =
+                numeroSerieMatch ||
+                (device.tipo && device.tipo.toLowerCase().includes(searchTerm)) ||
+                (device.modelo && device.modelo.toLowerCase().includes(searchTerm)) ||
+                (device.nome && device.nome.toLowerCase().includes(searchTerm)) ||
+                (device.observacao && device.observacao.toLowerCase().includes(searchTerm));
+
+            const matchesStatus = !statusFilter || device.status === statusFilter;
+
+            return matchesSearch && matchesStatus;
+        });
+
+        currentPage = 1;
+        renderTable();
+    }
+
+    // Mudar quantidade de itens por página
+    function changeItemsPerPage() {
+        itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+        currentPage = 1;
+        renderTable();
+    }
+
+    // Renderizar tabela com paginação
+    function renderTable() {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const currentDevices = filteredDevices.slice(startIndex, endIndex);
+        const tableColumnSpan = canBulkDeleteDevices ? 8 : 7;
+
+        const tbody = document.getElementById('devicesTableBody');
+        tbody.innerHTML = '';
+
+        if (currentDevices.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="${tableColumnSpan}" class="text-center text-muted py-4">
+                    <i class="fas fa-laptop fa-2x mb-2 d-block"></i>
+                    Nenhum device encontrado
+                </td>
+            </tr>
+        `;
+        } else {
+            currentDevices.forEach(device => {
+                const isChecked = selectedDeviceIds.has(device.id);
+                const checkboxCell = canBulkDeleteDevices ? `
+                <td>
+                    <input type="checkbox" class="device-checkbox" value="${device.id}" ${isChecked ? 'checked' : ''} onchange="toggleDeviceSelection(${device.id})">
+                </td>` : '';
+                const row = `
+                <tr>
+                    ${checkboxCell}
+                    <td>
+                        <span class="badge bg-primary">${device.tipo}</span>
+                    </td>
+                    <td>${device.modelo || '-'}</td>
+                    <td>${device.nome || '-'}</td>
+                    <td><code>${device.numero_serie}</code></td>
+                    <td>
+                        <span class="badge ${getStatusBadgeClass(device.status)}">
+                            ${device.status}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge ${device.para_emprestimo === 'Sim' ? 'bg-info' : 'bg-secondary'}">
+                            ${device.para_emprestimo}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-apple-outline" onclick="editarDevice(${device.id})">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="excluirDevice(${device.id}, ${JSON.stringify(device.nome || '')})">
+                                <i class="fas fa-trash me-1"></i>Excluir
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        renderPagination();
+        updatePageInfo();
+        updateSelectAllDevices();
+        updateDeleteButtonDevices();
+    }
+
+    // Renderizar paginação
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredDevices.length / itemsPerPage);
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Botão Anterior
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;" aria-label="Anterior">
+            <span aria-hidden="true">&laquo;</span>
+        </a>
+    `;
+        pagination.appendChild(prevLi);
+
+        // Páginas
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            pageLi.innerHTML = `
+            <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+        `;
+            pagination.appendChild(pageLi);
+        }
+
+        // Botão Próximo
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;" aria-label="Próximo">
+            <span aria-hidden="true">&raquo;</span>
+        </a>
+    `;
+        pagination.appendChild(nextLi);
+    }
+
+    // Mudar página
+    function changePage(page) {
+        const totalPages = Math.ceil(filteredDevices.length / itemsPerPage);
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        renderTable();
+
+        // Scroll para o topo da tabela
+        document.querySelector('.card-body').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Atualizar informações da página
+    function updatePageInfo() {
+        const startIndex = (currentPage - 1) * itemsPerPage + 1;
+        const endIndex = Math.min(currentPage * itemsPerPage, filteredDevices.length);
+        const total = filteredDevices.length;
+
+        document.getElementById('pageInfo').textContent =
+            `Mostrando ${startIndex} a ${endIndex} de ${total} devices`;
+    }
+
+    // Helper para classes de badge de status
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'Disponível': return 'bg-success';
+            case 'Emprestado': return 'bg-warning';
+            case 'Manutenção': return 'bg-danger';
+            default: return 'bg-secondary';
+        }
+    }
+
+    // Submit do formulário de device
+    document.getElementById('formDevice').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const deviceId = formData.get('device_id');
+        const data = {
+            tipo: formData.get('tipo'),
+            modelo: formData.get('modelo'),
+            cor: formData.get('cor'),
+            polegadas: formData.get('polegadas'),
+            ano: formData.get('ano'),
+            nome: formData.get('nome'),
+            chip: formData.get('chip'),
+            memoria: formData.get('memoria'),
+            numero_serie: formData.get('numero_serie'),
+            versao_os: formData.get('versao_os'),
+            status: formData.get('status'),
+            para_emprestimo: formData.get('para_emprestimo') === 'true',
+            observacao: formData.get('observacao')
+        };
+
+        // Validar dados
+        if (!data.tipo || !data.numero_serie || !data.status) {
+            alert('Por favor, preencha todos os campos obrigatórios!');
+            return;
+        }
+
+        const url = deviceId ? `/api/devices/${deviceId}` : '/api/devices';
+        const method = deviceId ? 'PUT' : 'POST';
+
+        // Enviar para API
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    // Verificar se o device ainda atende aos critérios da lista
+                    const atendeCriterios = data.status === 'Disponível' && data.para_emprestimo === true;
+
+                    if (deviceId && !atendeCriterios) {
+                        // Device foi editado e não atende mais aos critérios
+                        alert('Device atualizado com sucesso! Este device foi removido da lista pois não está mais disponível para empréstimo.');
+
+                        // Fechar modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevice'));
+                        modal.hide();
+
+                        // Remover device da lista sem recarregar a página
+                        allDevices = allDevices.filter(d => d.id !== parseInt(deviceId));
+                        filteredDevices = filteredDevices.filter(d => d.id !== parseInt(deviceId));
+                        renderTable();
+                    } else {
+                        // Device novo ou ainda atende aos critérios
+                        alert(deviceId ? 'Device atualizado com sucesso!' : 'Device cadastrado com sucesso!');
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('modalDevice'));
+                        modal.hide();
+
+                        if (deviceId) {
+                            // Atualizar localmente sem recarregar
+                            const id = parseInt(deviceId);
+                            const deviceIndex = allDevices.findIndex(d => d.id === id);
+
+                            if (deviceIndex !== -1) {
+                                // Atualizar objeto existente
+                                const device = allDevices[deviceIndex];
+
+                                // Atualizar campos
+                                device.tipo = data.tipo;
+                                device.modelo = data.modelo;
+                                device.cor = data.cor;
+                                device.polegadas = data.polegadas;
+                                device.ano = data.ano;
+                                device.nome = data.nome;
+                                device.chip = data.chip;
+                                device.memoria = data.memoria;
+                                device.numero_serie = data.numero_serie;
+                                device.versao_os = data.versao_os;
+                                device.status = data.status;
+                                device.para_emprestimo = data.para_emprestimo ? 'Sim' : 'Não';
+                                device.observacao = data.observacao;
+
+                                // Re-renderizar tabela mantendo a página atual
+                                renderTable();
+                            } else {
+                                // Fallback caso não encontre (não deveria acontecer)
+                                location.reload();
+                            }
+                        } else {
+                            // Para novos devices, recarregar a página é mais seguro para garantir IDs corretos
+                            location.reload();
+                        }
+                    }
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao salvar device. Verifique o console para mais detalhes.');
+            });
+    });
+
+    // Editar device - FUNÇÃO CORRIGIDA PARA PREENCHER CAMPOS CORRETAMENTE
+    function editarDevice(deviceId) {
+        console.log('Editando device ID:', deviceId);
+
+        // Se o ID é negativo, significa que vem do equipment_control
+        // Nesse caso, não permitir edição direta - o usuário deve editar no equipment_control
+        if (deviceId < 0) {
+            alert('Este device vem do módulo Equipment Control. Por favor, edite-o diretamente no módulo Equipment Control.');
+            return;
+        }
+
+        fetch(`/api/devices/${deviceId}`)
+            .then(response => response.json())
+            .then(result => {
+                console.log('Resposta da API:', result);
+                if (result.success) {
+                    const device = result.data;
+                    console.log('Dados do device:', device);
+
+                    // Alterar título do modal
+                    document.getElementById('modalDeviceTitle').textContent = 'Editar Device';
+
+                    // Abrir modal usando Bootstrap
+                    const modalElement = document.getElementById('modalDevice');
+                    const modal = new bootstrap.Modal(modalElement);
+
+                    // Preencher campos quando o modal estiver completamente aberto
+                    modalElement.addEventListener('shown.bs.modal', function fillModalOnce() {
+                        console.log('✅ Modal completamente aberto, preenchendo campos...');
+
+                        // Preencher campos básicos primeiro
+                        document.getElementById('device_id').value = device.id || '';
+                        document.getElementById('selectTipoDevice').value = device.tipo || '';
+                        document.getElementById('numero_serie_device').value = device.numero_serie || '';
+                        document.getElementById('status_device').value = device.status || 'Disponível';
+
+                        // Converter para_emprestimo corretamente
+                        const paraEmprestimoValue = device.para_emprestimo;
+                        let paraEmprestimoBool;
+                        if (typeof paraEmprestimoValue === 'boolean') {
+                            paraEmprestimoBool = paraEmprestimoValue;
+                        } else if (typeof paraEmprestimoValue === 'string') {
+                            paraEmprestimoBool = (paraEmprestimoValue.toLowerCase() === 'true' || paraEmprestimoValue.toLowerCase() === 'sim' || paraEmprestimoValue === '1');
+                        } else if (typeof paraEmprestimoValue === 'number') {
+                            paraEmprestimoBool = (paraEmprestimoValue === 1);
+                        } else {
+                            paraEmprestimoBool = Boolean(paraEmprestimoValue);
+                        }
+                        document.getElementById('para_emprestimo_device').value = paraEmprestimoBool ? 'true' : 'false';
+
+                        document.getElementById('observacao_device').value = device.observacao || '';
+
+                        // Disparar evento change no select de tipo para mostrar os campos corretos
+                        const tipoSelect = document.getElementById('selectTipoDevice');
+                        tipoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+                        // Aguardar um pouco para os campos serem exibidos, então preencher
+                        setTimeout(() => {
+                            // Preencher campos específicos do tipo baseado no tipo do device
+                            const tipo = device.tipo || '';
+                            const tipoLower = tipo.toLowerCase();
+
+                            if (tipoLower.includes('mac') || tipoLower.includes('macbook') || tipoLower.includes('mac mini')) {
+                                // Campos Mac
+                                const modeloMac = document.getElementById('modelo_mac');
+                                const corMac = document.getElementById('cor_mac');
+                                const polegadasMac = document.getElementById('polegadas_mac');
+                                const anoMac = document.getElementById('ano_mac');
+                                const chipMac = document.getElementById('chip_mac');
+                                const memoriaMac = document.getElementById('memoria_mac');
+                                const nomeMac = document.getElementById('nome_mac');
+                                const versaoOsMac = document.getElementById('versao_os_mac');
+
+                                if (modeloMac) modeloMac.value = device.modelo || '';
+                                if (corMac) corMac.value = device.cor || '';
+                                if (polegadasMac) polegadasMac.value = device.polegadas || '';
+                                if (anoMac) anoMac.value = device.ano || '';
+                                if (chipMac) chipMac.value = device.chip || '';
+                                if (memoriaMac) memoriaMac.value = device.memoria || '';
+                                if (nomeMac) nomeMac.value = device.nome || '';
+                                if (versaoOsMac) versaoOsMac.value = device.versao_os || '';
+
+                            } else if (tipoLower.includes('iphone') || tipoLower.includes('ipad')) {
+                                // Campos iOS
+                                const modeloIos = document.getElementById('modelo_ios');
+                                const corIos = document.getElementById('cor_ios');
+                                const nomeIos = document.getElementById('nome_ios');
+                                const versaoOsIos = document.getElementById('versao_os_ios');
+
+                                if (modeloIos) modeloIos.value = device.modelo || '';
+                                if (corIos) corIos.value = device.cor || '';
+                                if (nomeIos) nomeIos.value = device.nome || '';
+                                if (versaoOsIos) versaoOsIos.value = device.versao_os || '';
+
+                            } else if (tipoLower.includes('watch') || tipoLower.includes('vision')) {
+                                // Campos Wearables
+                                const modeloWear = document.getElementById('modelo_wear');
+                                const corWear = document.getElementById('cor_wear');
+                                const nomeWear = document.getElementById('nome_wear');
+                                const versaoOsWear = document.getElementById('versao_os_wear');
+
+                                if (modeloWear) modeloWear.value = device.modelo || '';
+                                if (corWear) corWear.value = device.cor || '';
+                                if (nomeWear) nomeWear.value = device.nome || '';
+                                if (versaoOsWear) versaoOsWear.value = device.versao_os || '';
+                            }
+
+                            console.log('✅ Campos preenchidos com sucesso!');
+                        }, 100);
+
+                        // Remover o listener após usar uma vez
+                        modalElement.removeEventListener('shown.bs.modal', fillModalOnce);
+                    }, { once: true });
+
+                    // Abrir o modal
+                    modal.show();
+
+                } else {
+                    alert('Erro ao carregar device: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao carregar device. Verifique o console para mais detalhes.');
+            });
+    }
+
+    // Excluir device
+    function excluirDevice(deviceId, deviceNome) {
+        // Se o ID é negativo, significa que vem do equipment_control
+        // Nesse caso, não permitir exclusão direta - o usuário deve excluir no equipment_control
+        if (deviceId < 0) {
+            alert('Este device vem do módulo Equipment Control. Por favor, exclua-o diretamente no módulo Equipment Control.');
+            return;
+        }
+
+        if (confirm(`Tem certeza que deseja excluir o device "${deviceNome}"? Esta ação não pode ser desfeita.`)) {
+            fetch(`/api/devices/${deviceId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao excluir device. Verifique o console para mais detalhes.');
+                });
+        }
+    }
+
+
+    // =============================================================================
+    // FUNÇÕES DE SELEÇÃO MÚLTIPLA
+    // =============================================================================
+
+    function toggleDeviceSelection(deviceId) {
+        if (!canBulkDeleteDevices) return;
+        if (selectedDeviceIds.has(deviceId)) {
+            selectedDeviceIds.delete(deviceId);
+        } else {
+            selectedDeviceIds.add(deviceId);
+        }
+        updateDeleteButtonDevices();
+        updateSelectAllDevices();
+    }
+
+    function toggleSelectAllDevices(checkbox) {
+        if (!canBulkDeleteDevices) return;
+        const currentDevices = filteredDevices.slice(
+            (currentPage - 1) * itemsPerPage,
+            currentPage * itemsPerPage
+        );
+
+        if (checkbox.checked) {
+            currentDevices.forEach(device => selectedDeviceIds.add(device.id));
+        } else {
+            currentDevices.forEach(device => selectedDeviceIds.delete(device.id));
+        }
+
+        document.querySelectorAll('.device-checkbox').forEach(cb => cb.checked = checkbox.checked);
+        updateDeleteButtonDevices();
+    }
+
+    function updateSelectAllDevices() {
+        const selectAll = document.getElementById('selectAllDevices');
+        if (!selectAll) return;
+
+        const currentDevices = filteredDevices.slice(
+            (currentPage - 1) * itemsPerPage,
+            currentPage * itemsPerPage
+        );
+
+        if (currentDevices.length === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+            return;
+        }
+
+        const selectedCount = currentDevices.filter(device => selectedDeviceIds.has(device.id)).length;
+        if (selectedCount === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (selectedCount === currentDevices.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        }
+    }
+
+    function updateDeleteButtonDevices() {
+        const btn = document.getElementById('btnDeleteSelectedDevices');
+        if (!btn) return;
+        const countEl = document.getElementById('devicesSelectedCount');
+        if (selectedDeviceIds.size > 0) {
+            btn.style.display = 'block';
+            countEl.textContent = selectedDeviceIds.size;
+        } else {
+            btn.style.display = 'none';
+            if (countEl) countEl.textContent = '0';
+        }
+    }
+
+    function deleteSelectedDevices() {
+        if (!canBulkDeleteDevices) return;
+        if (selectedDeviceIds.size === 0) {
+            alert('Nenhum device selecionado!');
+            return;
+        }
+
+        if (!confirm(`Tem certeza que deseja excluir ${selectedDeviceIds.size} device(s)?`)) {
+            return;
+        }
+
+        fetch('/api/devices/delete-multiple', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ids: Array.from(selectedDeviceIds) })
+        })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    selectedDeviceIds.clear();
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao excluir devices. Verifique o console para mais detalhes.');
+            });
+    }
+
+
+    // Inicializar abas
+    document.addEventListener('DOMContentLoaded', function () {
+        const triggerTabList = [].slice.call(document.querySelectorAll('#deviceTabs a'));
+        triggerTabList.forEach(function (triggerEl) {
+            const tabTrigger = new bootstrap.Tab(triggerEl);
+            triggerEl.addEventListener('click', function (event) {
+                event.preventDefault();
+                tabTrigger.show();
+            });
+        });
+    });
+</script>
+
+<style>
+    .page-item.active .page-link {
+        background-color: #000000;
+        border-color: #000000;
+    }
+
+    .page-link {
+        color: #000000;
+    }
+
+    .page-link:hover {
+        color: #000000;
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+
+    .pagination {
+        margin-bottom: 0;
+    }
+
+    .device-checkbox {
+        cursor: pointer;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.075);
+    }
+</style>
+{% endblock %}

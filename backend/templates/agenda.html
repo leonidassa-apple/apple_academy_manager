@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold"><i class="bi bi-calendar-week me-2"></i>Agenda de Eventos</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-apple" data-bs-toggle="modal" data-bs-target="#modalEvento">
+            <i class="bi bi-plus-circle me-2"></i>Novo Evento
+        </button>
+    </div>
+</div>
+
+<!-- Calendário -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Criar/Editar Evento -->
+<div class="modal fade" id="modalEvento" tabindex="-1" aria-labelledby="modalEventoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEventoLabel">
+                    <i class="bi bi-calendar-plus me-2"></i><span id="modalTitulo">Novo Evento</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEvento">
+                    <input type="hidden" id="evento_id" name="evento_id">
+
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="titulo" class="form-label">Título *</label>
+                            <input type="text" class="form-control" id="titulo" name="titulo" required>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="cor" class="form-label">Cor</label>
+                            <input type="color" class="form-control form-control-color" id="cor" name="cor"
+                                value="#007bff">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="3"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="data_inicio" class="form-label">Data/Hora Início *</label>
+                            <input type="datetime-local" class="form-control" id="data_inicio" name="data_inicio"
+                                required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="data_fim" class="form-label">Data/Hora Fim *</label>
+                            <input type="datetime-local" class="form-control" id="data_fim" name="data_fim" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="local" class="form-label">Local</label>
+                            <input type="text" class="form-control" id="local" name="local" placeholder="Ex: Sala A101">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="tipo" class="form-label">Tipo</label>
+                            <select class="form-select" id="tipo" name="tipo">
+                                <option value="">Selecione...</option>
+                                <option value="Reunião">Reunião</option>
+                                <option value="Aula">Aula</option>
+                                <option value="Workshop">Workshop</option>
+                                <option value="Apresentação">Apresentação</option>
+                                <option value="Evento">Evento</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="participantes" class="form-label">Participantes</label>
+                        <input type="text" class="form-control" id="participantes" name="participantes"
+                            placeholder="Ex: João, Maria, Pedro">
+                        <small class="text-muted">Separe os nomes por vírgula</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnExcluir" style="display: none;">
+                    <i class="bi bi-trash me-2"></i>Excluir
+                </button>
+                <button type="button" class="btn btn-apple" id="btnSalvar">
+                    <i class="bi bi-check-circle me-2"></i>Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+    #calendar {
+        max-width: 100%;
+        margin: 0 auto;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .fc-event {
+        cursor: pointer;
+        border-radius: 4px;
+        padding: 2px 4px;
+    }
+
+    .fc-daygrid-event {
+        white-space: normal;
+    }
+
+    .fc-toolbar-title {
+        font-size: 1.5rem !important;
+        font-weight: 600;
+    }
+
+    .fc-button {
+        background-color: #007bff !important;
+        border-color: #007bff !important;
+    }
+
+    .fc-button:hover {
+        background-color: #0056b3 !important;
+        border-color: #0056b3 !important;
+    }
+
+    .fc-button-active {
+        background-color: #0056b3 !important;
+        border-color: #0056b3 !important;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/pt-br.global.min.js"></script>
+
+<script>
+    let calendar;
+    let eventoAtual = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const calendarEl = document.getElementById('calendar');
+
+        // Inicializar FullCalendar
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'pt-br',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+            },
+            buttonText: {
+                today: 'Hoje',
+                month: 'Mês',
+                week: 'Semana',
+                day: 'Dia',
+                list: 'Lista'
+            },
+            editable: true,
+            selectable: true,
+            selectMirror: true,
+            dayMaxEvents: true,
+            weekends: true,
+
+            // Carregar eventos
+            events: function (info, successCallback, failureCallback) {
+                fetch('/api/eventos')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const eventos = data.data.map(evento => ({
+                                id: evento.id,
+                                title: evento.titulo,
+                                start: evento.data_inicio,
+                                end: evento.data_fim,
+                                color: evento.cor || '#007bff',
+                                extendedProps: {
+                                    descricao: evento.descricao,
+                                    local: evento.local,
+                                    tipo: evento.tipo,
+                                    participantes: evento.participantes
+                                }
+                            }));
+                            successCallback(eventos);
+                        } else {
+                            failureCallback();
+                            showAlert('error', 'Erro ao carregar eventos');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        failureCallback();
+                    });
+            },
+
+            // Clicar em um evento
+            eventClick: function (info) {
+                editarEvento(info.event);
+            },
+
+            // Selecionar um período (criar novo evento)
+            select: function (info) {
+                novoEvento(info.start, info.end);
+            },
+
+            // Mover evento (arrastar e soltar)
+            eventDrop: function (info) {
+                atualizarDataEvento(info.event);
+            },
+
+            // Redimensionar evento
+            eventResize: function (info) {
+                atualizarDataEvento(info.event);
+            }
+        });
+
+        calendar.render();
+
+        // Event listeners
+        document.getElementById('btnSalvar').addEventListener('click', salvarEvento);
+        document.getElementById('btnExcluir').addEventListener('click', excluirEvento);
+
+        // Limpar formulário ao fechar modal
+        document.getElementById('modalEvento').addEventListener('hidden.bs.modal', function () {
+            limparFormulario();
+        });
+    });
+
+    function novoEvento(start, end) {
+        eventoAtual = null;
+        limparFormulario();
+        document.getElementById('modalTitulo').textContent = 'Novo Evento';
+        document.getElementById('btnExcluir').style.display = 'none';
+
+        // Preencher datas
+        if (start) {
+            document.getElementById('data_inicio').value = formatDateTimeLocal(start);
+        }
+        if (end) {
+            document.getElementById('data_fim').value = formatDateTimeLocal(end);
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('modalEvento'));
+        modal.show();
+    }
+
+    function editarEvento(event) {
+        eventoAtual = event;
+        document.getElementById('modalTitulo').textContent = 'Editar Evento';
+        document.getElementById('btnExcluir').style.display = 'block';
+
+        // Preencher formulário
+        document.getElementById('evento_id').value = event.id;
+        document.getElementById('titulo').value = event.title;
+        document.getElementById('descricao').value = event.extendedProps.descricao || '';
+        document.getElementById('data_inicio').value = formatDateTimeLocal(event.start);
+        document.getElementById('data_fim').value = formatDateTimeLocal(event.end || event.start);
+        document.getElementById('local').value = event.extendedProps.local || '';
+        document.getElementById('tipo').value = event.extendedProps.tipo || '';
+        document.getElementById('participantes').value = event.extendedProps.participantes || '';
+        document.getElementById('cor').value = event.backgroundColor || '#007bff';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalEvento'));
+        modal.show();
+    }
+
+    function salvarEvento() {
+        const form = document.getElementById('formEvento');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const eventoId = document.getElementById('evento_id').value;
+        const data = {
+            titulo: document.getElementById('titulo').value,
+            descricao: document.getElementById('descricao').value,
+            data_inicio: document.getElementById('data_inicio').value,
+            data_fim: document.getElementById('data_fim').value,
+            local: document.getElementById('local').value,
+            tipo: document.getElementById('tipo').value,
+            participantes: document.getElementById('participantes').value,
+            cor: document.getElementById('cor').value
+        };
+
+        const url = eventoId ? `/api/eventos/${eventoId}` : '/api/eventos';
+        const method = eventoId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    calendar.refetchEvents();
+                    bootstrap.Modal.getInstance(document.getElementById('modalEvento')).hide();
+                } else {
+                    showAlert('error', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showAlert('error', 'Erro ao salvar evento');
+            });
+    }
+
+    function excluirEvento() {
+        if (!eventoAtual) return;
+
+        if (!confirm('Deseja realmente excluir este evento?')) {
+            return;
+        }
+
+        fetch(`/api/eventos/${eventoAtual.id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    calendar.refetchEvents();
+                    bootstrap.Modal.getInstance(document.getElementById('modalEvento')).hide();
+                } else {
+                    showAlert('error', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showAlert('error', 'Erro ao excluir evento');
+            });
+    }
+
+    function atualizarDataEvento(event) {
+        const data = {
+            titulo: event.title,
+            descricao: event.extendedProps.descricao || '',
+            data_inicio: event.start.toISOString(),
+            data_fim: (event.end || event.start).toISOString(),
+            local: event.extendedProps.local || '',
+            tipo: event.extendedProps.tipo || '',
+            participantes: event.extendedProps.participantes || '',
+            cor: event.backgroundColor || '#007bff'
+        };
+
+        fetch(`/api/eventos/${event.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Evento atualizado');
+                } else {
+                    showAlert('error', data.message);
+                    calendar.refetchEvents();
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showAlert('error', 'Erro ao atualizar evento');
+                calendar.refetchEvents();
+            });
+    }
+
+    function limparFormulario() {
+        document.getElementById('formEvento').reset();
+        document.getElementById('evento_id').value = '';
+        document.getElementById('cor').value = '#007bff';
+        eventoAtual = null;
+    }
+
+    function formatDateTimeLocal(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.content || '';
+    }
+
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.style.position = 'fixed';
+        alertDiv.style.top = '20px';
+        alertDiv.style.right = '20px';
+        alertDiv.style.zIndex = '9999';
+        alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+        document.body.appendChild(alertDiv);
+        setTimeout(() => alertDiv.remove(), 5000);
+    }
+</script>
+{% endblock %}

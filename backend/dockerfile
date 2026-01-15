@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instalar dependências do sistema
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar requirements primeiro (cache mais eficiente)
+COPY requirements.txt .
+
+# Instalar dependências Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar o código da aplicação
+COPY . .
+
+# Criar diretórios necessários
+RUN mkdir -p uploads backups static/css static/js
+
+# Expor a porta
+EXPOSE 5001
+
+# Comando para rodar a aplicação com Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "app:app"]

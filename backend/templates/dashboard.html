@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+
+    </div>
+</div>
+<!-- Estatísticas de Alunos -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h4 class="mb-4 fw-bold">Estatísticas de Alunos</h4>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-primary">{{ total_alunos }}</div>
+                <div class="stat-label">Total de Alunos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-success">{{ alunos_regular }}</div>
+                <div class="stat-label">Alunos Regular</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-info">{{ alunos_foundation }}</div>
+                <div class="stat-label">Alunos Foundation</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-warning">{{ foundation_trimestre }}</div>
+                <div class="stat-label">Foundation/Semestre</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-danger">{{ foundation_ano }}</div>
+                <div class="stat-label">Foundation/Ano</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estatísticas de Devices -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h4 class="mb-4 fw-bold">Estatísticas de Devices</h4>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-primary">{{ devices_emprestimo }}</div>
+                <div class="stat-label">Para Empréstimo</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-success">{{ devices_disponiveis }}</div>
+                <div class="stat-label">Disponíveis</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-warning">{{ devices_emprestados }}</div>
+                <div class="stat-label">Emprestados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-danger">{{ devices_manutencao }}</div>
+                <div class="stat-label">Em Manutenção</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estatísticas da Biblioteca -->
+<div class="row mb-5">
+    <div class="col-12 d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">Biblioteca</h4>
+        <a href="{{ url_for('livros_catalogo') }}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-book me-2"></i>Acessar Catálogo
+        </a>
+    </div>
+    <div class="col-md-4 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-primary">{{ total_livros }}</div>
+                <div class="stat-label">Títulos no Acervo</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-success">{{ livros_disponiveis }}</div>
+                <div class="stat-label">Exemplares Disponíveis</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-warning">{{ emprestimos_livros_ativos }}</div>
+                <div class="stat-label">Empréstimos Ativos</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informações Adicionais -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-transparent border-bottom-0">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-clock me-2"></i>Empréstimos Recentes
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Device</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if emprestimos_recentes %}
+                            {% for emprestimo in emprestimos_recentes %}
+                            <tr>
+                                <td>{{ emprestimo.aluno_nome or 'N/A' }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ emprestimo.device_tipo or 'N/A' }}</span>
+                                    {{ emprestimo.device_nome or 'Sem nome' }}
+                                </td>
+                                <td>
+                                    {% if emprestimo.data_retirada %}
+                                    {{ emprestimo.data_retirada }}
+                                    {% else %}
+                                    N/A
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
+                                    Nenhum empréstimo ativo
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-transparent border-bottom-0">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-star me-2"></i>Devices Mais Utilizados
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Empréstimos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if devices_mais_utilizados %}
+                            {% for device in devices_mais_utilizados %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-info">{{ device.tipo or 'N/A' }}</span>
+                                    {{ device.nome or 'Sem nome' }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ device.total_emprestimos or 0 }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-4">
+                                    <i class="bi bi-bar-chart fs-1 mb-2 d-block"></i>
+                                    Nenhum empréstimo registrado
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Próximos Eventos -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="mb-4 fw-bold"><i class="bi bi-calendar-event me-2"></i>Próximos Eventos</h4>
+    </div>
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-transparent border-bottom-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="bi bi-list-task me-2"></i>Agenda
+                    </h5>
+                    <a href="{{ url_for('agenda') }}" class="btn btn-apple-outline btn-sm">
+                        <i class="bi bi-calendar-plus me-2"></i>Ver Agenda Completa
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="proximos-eventos-lista">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botão para atualizar dashboard -->
+<div class="row mb-3">
+    <div class="col-12 text-end">
+        <button type="button" class="btn btn-apple-outline btn-sm" onclick="atualizarDashboard()"
+            title="Atualizar dados do dashboard">
+            <i class="fas fa-sync-alt me-2"></i>Atualizar Dashboard
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Função para atualizar o dashboard
+    function atualizarDashboard() {
+        const btn = event.target.closest('button');
+        const icon = btn.querySelector('i');
+
+        // Adicionar animação de rotação
+        icon.classList.add('fa-spin');
+        btn.disabled = true;
+
+        // Recarregar a página após um breve delay
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+    }
+
+    // Atualizar automaticamente a cada 5 minutos
+    setInterval(function () {
+        // Atualizar apenas as estatísticas sem recarregar a página inteira
+        fetch('/api/dashboard/stats')
+            .then(response => response.json())
+            .then(data => {
+                // Atualizar apenas os números das estatísticas
+                if (data.total_alunos !== undefined) {
+                    updateStatCard('Total de Alunos', data.total_alunos);
+                }
+                if (data.alunos_regular !== undefined) {
+                    updateStatCard('Alunos Regular', data.alunos_regular);
+                }
+                if (data.alunos_foundation !== undefined) {
+                    updateStatCard('Alunos Foundation', data.alunos_foundation);
+                }
+                if (data.devices_emprestimo !== undefined) {
+                    updateStatCard('Para Empréstimo', data.devices_emprestimo);
+                }
+                if (data.devices_emprestados !== undefined) {
+                    updateStatCard('Emprestados', data.devices_emprestados);
+                }
+                if (data.devices_disponiveis !== undefined) {
+                    updateStatCard('Disponíveis', data.devices_disponiveis);
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar estatísticas:', error);
+            });
+    }, 300000); // 5 minutos
+
+    // Função auxiliar para atualizar cards de estatísticas
+    function updateStatCard(label, value) {
+        const cards = document.querySelectorAll('.stat-card');
+        cards.forEach(card => {
+            const labelElement = card.querySelector('.stat-label');
+            if (labelElement && labelElement.textContent.trim() === label) {
+                const numberElement = card.querySelector('.stat-number');
+                if (numberElement) {
+                    // Animação suave ao atualizar
+                    numberElement.style.transition = 'all 0.3s ease';
+                    numberElement.style.transform = 'scale(1.1)';
+                    setTimeout(() => {
+                        numberElement.textContent = value;
+                        numberElement.style.transform = 'scale(1)';
+                    }, 150);
+                }
+            }
+        });
+    }
+
+    // Carregar próximos eventos para o dashboard
+    function carregarProximosEventos() {
+        fetch('/api/eventos/dashboard')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('proximos-eventos-lista');
+
+                if (data.success && data.data && data.data.length > 0) {
+                    let html = '<div class="list-group">';
+
+                    data.data.forEach(evento => {
+                        const dataInicio = new Date(evento.data_inicio);
+                        const dataFim = new Date(evento.data_fim);
+                        const dataFormatada = dataInicio.toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                        });
+                        const horaInicio = dataInicio.toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        const horaFim = dataFim.toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+
+                        // Ícone baseado no tipo
+                        let icone = 'bi-calendar-event';
+                        switch (evento.tipo) {
+                            case 'Reunião': icone = 'bi-people'; break;
+                            case 'Aula': icone = 'bi-book'; break;
+                            case 'Workshop': icone = 'bi-tools'; break;
+                            case 'Apresentação': icone = 'bi-easel'; break;
+                            case 'Evento': icone = 'bi-star'; break;
+                        }
+
+                        html += `
+                        <div class="list-group-item list-group-item-action" style="border-left: 4px solid ${evento.cor || '#007bff'}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    <i class="bi ${icone} me-2" style="color: ${evento.cor || '#007bff'}"></i>
+                                    ${evento.titulo}
+                                </h6>
+                                <small class="text-muted">${dataFormatada}</small>
+                            </div>
+                            <p class="mb-1 small text-muted">
+                                <i class="bi bi-clock me-1"></i>${horaInicio} - ${horaFim}
+                                ${evento.local ? `<i class="bi bi-geo-alt ms-3 me-1"></i>${evento.local}` : ''}
+                            </p>
+                            ${evento.descricao ? `<p class="mb-0 small">${evento.descricao}</p>` : ''}
+                            ${evento.tipo ? `<span class="badge bg-secondary mt-1">${evento.tipo}</span>` : ''}
+                        </div>
+                    `;
+                    });
+
+                    html += '</div>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+                        Nenhum evento agendado
+                        <br>
+                        <a href="/agenda" class="btn btn-apple-outline btn-sm mt-3">
+                            <i class="bi bi-calendar-plus me-2"></i>Criar Evento
+                        </a>
+                    </div>
+                `;
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar eventos:', error);
+                document.getElementById('proximos-eventos-lista').innerHTML = `
+                <div class="text-center text-danger py-4">
+                    <i class="bi bi-exclamation-triangle fs-1 mb-2 d-block"></i>
+                    Erro ao carregar eventos
+                </div>
+            `;
+            });
+    }
+
+    // Carregar eventos ao carregar a página
+    document.addEventListener('DOMContentLoaded', function () {
+        carregarProximosEventos();
+    });
+</script>
+{% endblock %}
+```

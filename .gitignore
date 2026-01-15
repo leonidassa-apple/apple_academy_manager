@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Node
+node_modules/
+client/node_modules/
+dist/
+client/dist/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project Specific
+uploads/
+backend/uploads/
+backups/
+backend/academy.db
+data/
+*.log
+debug_output.html
+debug_output_missing.html
+backend/reset_leonidas.py
+backend/fix_user.py
+
+# VS Code
+.vscode/

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Gerenciamento de Backups</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin') }}" class="btn btn-apple-outline me-2">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+        <a href="{{ url_for('backup_database') }}" class="btn btn-apple">
+            <i class="fas fa-plus me-2"></i>Novo Backup
+        </a>
+    </div>
+</div>
+
+<!-- Informações sobre Backups -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Localização dos backups:</strong> <code>pasta_do_projeto/backups/</code>
+            <br>
+            <small>Os backups são cópias completas do banco de dados e podem ser usados para restaurar o
+                sistema.</small>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Backups -->
+<div class="card">
+    <div class="card-header bg-transparent border-bottom-0 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-bold">
+            <i class="fas fa-database me-2"></i>Backups Disponíveis
+        </h5>
+        <button id="btnExcluirSelecionados" class="btn btn-danger btn-sm" disabled onclick="excluirSelecionados()">
+            <i class="fas fa-trash me-2"></i>Excluir Selecionados
+        </button>
+    </div>
+    <div class="card-body">
+        {% if backups %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" class="form-check-input" id="checkAll" onchange="toggleAll(this)">
+                        </th>
+                        <th>Nome do Arquivo</th>
+                        <th>Data de Criação</th>
+                        <th>Tamanho</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for backup in backups %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input backup-check" value="{{ backup.nome }}"
+                                onchange="updateDeleteButton()">
+                        </td>
+                        <td>
+                            <i class="fas fa-database text-primary me-2"></i>
+                            <code>{{ backup.nome }}</code>
+                        </td>
+                        <td>{{ backup.data }}</td>
+                        <td>{{ backup.tamanho }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('download_backup', filename=backup.nome) }}"
+                                    class="btn btn-apple-outline">
+                                    <i class="fas fa-download me-1"></i>Download
+                                </a>
+                                <button class="btn btn-outline-danger" onclick="excluirBackup('{{ backup.nome }}')">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <div class="stat-number text-primary">{{ backups|length }}</div>
+                        <div class="stat-label">Total de Backups</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <div class="stat-number text-success">
+                            {% set total_size = backups|sum(attribute='tamanho_bytes') %}
+                            {% if total_size < 1024 %} {{ total_size }} B {% elif total_size < 1024 * 1024 %} {{
+                                (total_size / 1024)|round(1) }} KB {% else %} {{ (total_size / (1024 * 1024))|round(1)
+                                }} MB {% endif %} </div>
+                                <div class="stat-label">Espaço Utilizado</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="card-body text-center">
+                            <div class="stat-number text-info">
+                                {% if backups %}{{ backups[0].nome }}{% else %}Nenhum{% endif %}
+                            </div>
+                            <div class="stat-label">Backup Mais Recente</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-database fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">Nenhum backup encontrado</h5>
+                <p class="text-muted">Clique em "Novo Backup" para criar seu primeiro backup.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Instruções -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-transparent border-bottom-0">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="fas fa-question-circle me-2"></i>Como Usar os Backups
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-download text-primary me-2"></i>Fazer Download</h6>
+                            <p class="small text-muted">
+                                Faça download do backup para guardar em local seguro ou transferir para outro servidor.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-trash text-danger me-2"></i>Excluir Backup</h6>
+                            <p class="small text-muted">
+                                Exclua backups antigos para liberar espaço em disco. Recomenda-se manter os backups mais
+                                recentes.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6><i class="fas fa-sync-alt text-warning me-2"></i>Restaurar Sistema</h6>
+                            <p class="small text-muted">
+                                Para restaurar o sistema a partir de um backup, substitua o arquivo
+                                <code>academy.db</code>
+                                pelo arquivo de backup desejado e reinicie a aplicação.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block scripts %}
+    <script>
+        // Excluir backup
+        // Excluir backup individual
+        function excluirBackup(filename) {
+            if (confirm(`Tem certeza que deseja excluir o backup "${filename}"?`)) {
+                fetch(`/admin/backup/delete/${filename}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        alert(result.message);
+                        if (result.success) {
+                            location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        alert('Erro ao excluir backup: ' + error);
+                    });
+            }
+        }
+
+        // Controle dos checkboxes
+        function toggleAll(source) {
+            const checkboxes = document.querySelectorAll('.backup-check');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = source.checked;
+            });
+            updateDeleteButton();
+        }
+
+        function updateDeleteButton() {
+            const checkboxes = document.querySelectorAll('.backup-check:checked');
+            const btn = document.getElementById('btnExcluirSelecionados');
+            btn.disabled = checkboxes.length === 0;
+            btn.innerHTML = `<i class="fas fa-trash me-2"></i>Excluir Selecionados (${checkboxes.length})`;
+        }
+
+        // Excluir múltiplos backups
+        function excluirSelecionados() {
+            const checkboxes = document.querySelectorAll('.backup-check:checked');
+            const filenames = Array.from(checkboxes).map(cb => cb.value);
+
+            if (filenames.length === 0) return;
+
+            if (confirm(`Tem certeza que deseja excluir ${filenames.length} backup(s)?`)) {
+                fetch('/admin/backup/delete-multiple', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ filenames: filenames })
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        alert(result.message);
+                        if (result.success) {
+                            location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        alert('Erro ao excluir backups: ' + error);
+                    });
+            }
+        }
+    </script>
+    {% endblock %}

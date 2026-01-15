@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: apple_academy_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_TYPE=mysql
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./uploads:/app/uploads
+  #    depends_on:
+  #      - db
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: apple_academy_client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+#  db:
+#    image: postgres:15-alpine
+#    container_name: apple_academy_db
+#    restart: unless-stopped
+#    environment:
+#      POSTGRES_USER: ${DB_USER:-admin}
+#      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+#      POSTGRES_DB: ${DB_NAME:-apple_academy}
+#    volumes:
+#      - pgdata:/var/lib/postgresql/data
+#    ports:
+#      - "5432:5432"
+
+volumes:
+  pgdata:

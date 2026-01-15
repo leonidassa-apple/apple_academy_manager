@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Gerenciamento de Usuários</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin') }}" class="btn btn-apple-outline me-2">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+        <button type="button" class="btn btn-apple" data-bs-toggle="modal" data-bs-target="#modalUsuario">
+            <i class="fas fa-plus me-2"></i>Novo Usuário
+        </button>
+    </div>
+</div>
+
+<!-- Tabela de Usuários -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuário</th>
+                        <th>Perfil</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <td>{{ usuario.id }}</td>
+                        <td>{{ usuario.username }}</td>
+                        <td>
+                            <span class="badge {% if usuario.role == 'admin' %}bg-primary{% else %}bg-info{% endif %}">
+                                {{ usuario.role }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-apple-outline" onclick="resetarSenha({{ usuario.id }})">
+                                    <i class="fas fa-key me-1"></i>Resetar Senha
+                                </button>
+                                {% if usuario.id != current_user.id %}
+                                <button class="btn btn-outline-danger"
+                                    onclick="excluirUsuario({{ usuario.id }}, '{{ usuario.username }}')">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Criar Usuário -->
+<div class="modal fade" id="modalUsuario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Criar Novo Usuário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formUsuario">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome de Usuário</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Senha</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Perfil</label>
+                        <select class="form-select" name="role" required>
+                            <option value="user">Usuário</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">Criar Usuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Criar usuário
+    document.getElementById('formUsuario').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = {
+            username: formData.get('username'),
+            password: formData.get('password'),
+            role: formData.get('role')
+        };
+
+        fetch('/admin/criar-usuario', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Usuário criado com sucesso!');
+                    // Fechar modal usando Bootstrap JavaScript nativo
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalUsuario'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao criar usuário: ' + error);
+            });
+    });
+
+    // Resetar senha
+    function resetarSenha(userId) {
+        if (confirm('Deseja resetar a senha deste usuário para "123456"?')) {
+            fetch('/admin/resetar-senha', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_id: userId })
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao resetar senha: ' + error);
+                });
+        }
+    }
+
+    // Excluir usuário
+    function excluirUsuario(userId, username) {
+        if (confirm(`Tem certeza que deseja excluir o usuário "${username}"?`)) {
+            fetch(`/admin/excluir-usuario/${userId}`, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao excluir usuário: ' + error);
+                });
+        }
+    }
+</script>
+{% endblock %}

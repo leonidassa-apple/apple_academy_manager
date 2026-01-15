@@ -1,0 +1,795 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Gerenciamento de Alunos</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" id="btnDeleteSelected" class="btn btn-outline-danger me-2" onclick="deleteSelected()"
+            style="display:none;">
+            <i class="fas fa-trash me-2"></i>Excluir Selecionados
+        </button>
+        <button type="button" class="btn btn-apple-outline me-2" onclick="downloadTemplate('alunos')">
+            <i class="fas fa-download me-2"></i>Baixar Template
+        </button>
+        <button type="button" class="btn btn-apple-outline me-2" data-bs-toggle="modal"
+            data-bs-target="#modalImportarAlunos">
+            <i class="fas fa-file-import me-2"></i>Importar
+        </button>
+        <button type="button" class="btn btn-apple" data-bs-toggle="modal" data-bs-target="#modalAluno">
+            <i class="fas fa-plus me-2"></i>Novo Aluno
+        </button>
+    </div>
+</div>
+
+<!-- Filtros e Busca -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="input-group">
+            <input type="text" class="form-control" id="searchAluno" placeholder="Buscar aluno...">
+            <button class="btn btn-apple-outline" type="button" onclick="filterAlunos()">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="filterTipo">
+            <option value="">Todos os tipos</option>
+            <option value="Regular">Regular</option>
+            <option value="Foundation">Foundation</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="itemsPerPage" onchange="changeItemsPerPage()">
+            <option value="10">10 por página</option>
+            <option value="20">20 por página</option>
+            <option value="50">50 por página</option>
+            <option value="100">100 por página</option>
+        </select>
+    </div>
+</div>
+
+<!-- Tabela de Alunos -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                        </th>
+                        <th style="width: 60px;">Foto</th>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Telefone</th>
+                        <th>E-mail</th>
+                        <th>Tipo</th>
+                        <th>Apple ID</th>
+                        <th>Data Início</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="alunosTableBody">
+                    <!-- Os alunos serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginação -->
+        <nav aria-label="Navegação de páginas">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- A paginação será gerada via JavaScript -->
+            </ul>
+        </nav>
+
+        <!-- Informações da página -->
+        <div class="text-center text-muted mt-2">
+            <small id="pageInfo">Mostrando 0 de 0 alunos</small>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Aluno -->
+<div class="modal fade" id="modalAluno" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAlunoTitle">Cadastrar Aluno</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAluno">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="aluno_id" id="aluno_id">
+                <div class="modal-body">
+                    <!-- Foto Preview -->
+                    <div class="text-center mb-4">
+                        <div
+                            style="width: 120px; height: 160px; margin: 0 auto; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; position: relative;">
+                            <img id="foto_preview" src="" alt="Foto do Aluno"
+                                style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                            <i id="foto_placeholder" class="fas fa-user fa-3x text-muted"></i>
+                        </div>
+                        <div class="mt-2">
+                            <label for="foto_input" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-camera me-1"></i>Alterar Foto
+                            </label>
+                            <input type="file" id="foto_input" name="foto" accept="image/*" style="display: none;"
+                                onchange="previewFoto(this)">
+                        </div>
+                        <small class="text-muted d-block mt-1">Formato 3x4 recomendado</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nome completo *</label>
+                            <input type="text" class="form-control" name="nome" id="nome_aluno" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">CPF</label>
+                            <input type="text" class="form-control" name="cpf" id="cpf_aluno"
+                                placeholder="000.000.000-00">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Telefone</label>
+                            <input type="tel" class="form-control" name="telefone" id="telefone_aluno"
+                                placeholder="(00) 00000-0000">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">E-mail *</label>
+                            <input type="email" class="form-control" name="email" id="email_aluno" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Endereço</label>
+                            <textarea class="form-control" name="endereco" id="endereco_aluno" rows="2"
+                                placeholder="Digite o endereço completo"></textarea>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo de Aluno *</label>
+                            <select class="form-select" name="tipo_aluno" id="tipo_aluno_select" required>
+                                <option value="">Selecione...</option>
+                                <option value="Regular">Regular</option>
+                                <option value="Foundation">Foundation</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Data de Início *</label>
+                            <input type="date" class="form-control" name="data_inicio" id="data_inicio_aluno" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tem Apple ID? *</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="tem_apple_id" value="true"
+                                        id="appleIdSim">
+                                    <label class="form-check-label" for="appleIdSim">Sim</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="tem_apple_id" value="false"
+                                        id="appleIdNao" checked>
+                                    <label class="form-check-label" for="appleIdNao">Não</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Apple ID</label>
+                            <input type="text" class="form-control" name="apple_id" id="apple_id_input"
+                                placeholder="exemplo@icloud.com" disabled>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">* Campos obrigatórios</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-save me-2"></i>Salvar Aluno
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Importar Alunos -->
+<div class="modal fade" id="modalImportarAlunos" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importar Alunos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formImportarAlunos" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Selecione o arquivo</label>
+                        <input type="file" class="form-control" name="file" accept=".xlsx,.xls,.csv" required>
+                        <div class="form-text">
+                            Formatos suportados: Excel (.xlsx, .xls) ou CSV (.csv)
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">Estrutura esperada do arquivo:</h6>
+                        <small>
+                            <strong>Colunas obrigatórias:</strong> nome, email<br>
+                            <strong>Colunas opcionais:</strong> cpf, telefone, endereço, tipo_aluno, tem_apple_id,
+                            apple_id, data_inicio<br>
+                            <strong>Valores para tipo_aluno:</strong> "Regular" ou "Foundation"<br>
+                            <strong>Valores para tem_apple_id:</strong> "Sim"/"Não" ou True/False<br>
+                            <strong>O sistema aceita automaticamente:</strong> Nome Completo, CPF, Telefone, Email,
+                            Endereço
+                        </small>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm"
+                            onclick="downloadTemplate('alunos')">
+                            <i class="fas fa-download me-1"></i>Baixar Template
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-upload me-2"></i>Importar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Variáveis globais para paginação
+    let currentPage = 1;
+    let itemsPerPage = 10;
+    let allAlunos = [];
+    let filteredAlunos = [];
+
+    // Inicializar quando o DOM estiver carregado
+    document.addEventListener('DOMContentLoaded', function () {
+        loadAllAlunos();
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        // Busca em tempo real
+        document.getElementById('searchAluno').addEventListener('input', filterAlunos);
+
+        // Filtro por tipo
+        document.getElementById('filterTipo').addEventListener('change', filterAlunos);
+
+        // Habilitar campo Apple ID quando selecionado "Sim"
+        document.querySelectorAll('input[name="tem_apple_id"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                const campoAppleId = document.getElementById('apple_id_input');
+                if (this.value === 'true') {
+                    campoAppleId.disabled = false;
+                    campoAppleId.required = true;
+                } else {
+                    campoAppleId.disabled = true;
+                    campoAppleId.required = false;
+                    campoAppleId.value = '';
+                }
+            });
+        });
+    }
+
+
+    function loadAllAlunos() {
+        // Carregar dados do backend via API
+        fetch('/api/alunos/lista')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    allAlunos = data.data;
+                    filteredAlunos = [...allAlunos];
+                    renderTable();
+                } else {
+                    console.error('Erro ao carregar alunos:', data.message);
+                    allAlunos = [];
+                    filteredAlunos = [];
+                    renderTable();
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+                allAlunos = [];
+                filteredAlunos = [];
+                renderTable();
+            });
+    }
+
+    // Filtrar alunos
+    function filterAlunos() {
+        const searchTerm = document.getElementById('searchAluno').value.toLowerCase();
+        const tipoFilter = document.getElementById('filterTipo').value;
+
+        filteredAlunos = allAlunos.filter(aluno => {
+            const matchesSearch =
+                aluno.nome.toLowerCase().includes(searchTerm) ||
+                aluno.cpf.toLowerCase().includes(searchTerm) ||
+                aluno.telefone.toLowerCase().includes(searchTerm) ||
+                aluno.email.toLowerCase().includes(searchTerm) ||
+                aluno.apple_id.toLowerCase().includes(searchTerm);
+
+            const matchesTipo = !tipoFilter || aluno.tipo_aluno === tipoFilter;
+
+            return matchesSearch && matchesTipo;
+        });
+
+        currentPage = 1;
+        renderTable();
+    }
+
+    // Mudar quantidade de itens por página
+    function changeItemsPerPage() {
+        itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+        currentPage = 1;
+        renderTable();
+    }
+
+    // Renderizar tabela com paginação
+    function renderTable() {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const currentAlunos = filteredAlunos.slice(startIndex, endIndex);
+
+        const tbody = document.getElementById('alunosTableBody');
+        tbody.innerHTML = '';
+
+        if (currentAlunos.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center text-muted py-4">
+                    <i class="fas fa-users fa-2x mb-2 d-block"></i>
+                    Nenhum aluno encontrado
+                </td>
+            </tr>
+        `;
+        } else {
+            currentAlunos.forEach(aluno => {
+                const row = `
+                <tr>
+                    <td>
+                        <input type="checkbox" class="student-checkbox" value="${aluno.id}" onchange="updateDeleteButton()">
+                    </td>
+                    <td>
+                        <div style="width: 40px; height: 53px; border-radius: 4px; overflow: hidden; background-color: #f8f9fa; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: center;">
+                            ${aluno.foto_path && aluno.foto_path !== 'null' && aluno.foto_path !== 'undefined' ?
+                        `<img src="/${aluno.foto_path}" alt="${aluno.nome}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                        `<i class="fas fa-user text-muted"></i>`
+                    }
+                        </div>
+                    </td>
+                    <td>${aluno.nome}</td>
+                    <td>${aluno.cpf || '-'}</td>
+                    <td>${aluno.telefone || '-'}</td>
+                    <td>${aluno.email}</td>
+                    <td>
+                        <span class="badge ${aluno.tipo_aluno === 'Regular' ? 'bg-primary' : 'bg-info'}">
+                            ${aluno.tipo_aluno}
+                        </span>
+                    </td>
+                    <td>${aluno.apple_id || '-'}</td>
+                    <td>${aluno.data_inicio}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-apple-outline" onclick="editarAluno(${aluno.id})">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="excluirAluno(${aluno.id}, '${aluno.nome}')">
+                                <i class="fas fa-trash me-1"></i>Excluir
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        renderPagination();
+        updatePageInfo();
+    }
+
+    // Renderizar paginação
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredAlunos.length / itemsPerPage);
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Botão Anterior
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changePage(${currentPage - 1})" aria-label="Anterior">
+            <span aria-hidden="true">&laquo;</span>
+        </a>
+    `;
+        pagination.appendChild(prevLi);
+
+        // Páginas
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            pageLi.innerHTML = `
+            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+        `;
+            pagination.appendChild(pageLi);
+        }
+
+        // Botão Próximo
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changePage(${currentPage + 1})" aria-label="Próximo">
+            <span aria-hidden="true">&raquo;</span>
+        </a>
+    `;
+        pagination.appendChild(nextLi);
+    }
+
+    // Mudar página
+    function changePage(page) {
+        const totalPages = Math.ceil(filteredAlunos.length / itemsPerPage);
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        renderTable();
+
+        // Scroll para o topo da tabela
+        document.querySelector('.card-body').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Atualizar informações da página
+    function updatePageInfo() {
+        const startIndex = (currentPage - 1) * itemsPerPage + 1;
+        const endIndex = Math.min(currentPage * itemsPerPage, filteredAlunos.length);
+        const total = filteredAlunos.length;
+
+        document.getElementById('pageInfo').textContent =
+            `Mostrando ${startIndex} a ${endIndex} de ${total} alunos`;
+    }
+
+    // Função para fechar modal manualmente (Mantida para compatibilidade, mas usando Bootstrap)
+    function fecharModalAluno() {
+        const modalElement = document.getElementById('modalAluno');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
+    }
+
+    // Função para abrir modal manualmente
+    function abrirModalAluno() {
+        const modalElement = document.getElementById('modalAluno');
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+
+    // Submit do formulário
+    document.getElementById('formAluno').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const alunoId = formData.get('aluno_id');
+
+        // Validar campos obrigatórios
+        if (!formData.get('nome') || !formData.get('email') || !formData.get('tipo_aluno') || !formData.get('data_inicio')) {
+            alert('Por favor, preencha todos os campos obrigatórios!');
+            return;
+        }
+
+        const url = alunoId ? `/api/alunos/${alunoId}` : '/api/alunos';
+        const method = alunoId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            body: formData
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(alunoId ? 'Aluno atualizado com sucesso!' : 'Aluno cadastrado com sucesso!');
+                    fecharModalAluno();
+                    location.reload();
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao salvar aluno. Verifique o console para mais detalhes.');
+            });
+    });
+
+    // Editar aluno
+    function editarAluno(alunoId) {
+        console.log('Fetching data for alunoId:', alunoId);
+        fetch(`/api/alunos/${alunoId}`)
+            .then(response => response.json())
+            .then(result => {
+                console.log('API Result:', result);
+                if (result.success) {
+                    const aluno = result.data;
+
+                    document.getElementById('aluno_id').value = aluno.id;
+                    document.getElementById('nome_aluno').value = aluno.nome;
+                    document.getElementById('cpf_aluno').value = aluno.cpf || '';
+                    document.getElementById('telefone_aluno').value = aluno.telefone || '';
+                    document.getElementById('email_aluno').value = aluno.email;
+                    document.getElementById('endereco_aluno').value = aluno.endereco || '';
+                    document.getElementById('tipo_aluno_select').value = aluno.tipo_aluno;
+                    document.getElementById('data_inicio_aluno').value = aluno.data_inicio;
+
+                    // Carregar foto
+                    const fotoPreview = document.getElementById('foto_preview');
+                    const fotoPlaceholder = document.getElementById('foto_placeholder');
+
+                    if (aluno.foto_path) {
+                        fotoPreview.src = '/' + aluno.foto_path;
+                        fotoPreview.style.display = 'block';
+                        fotoPlaceholder.style.display = 'none';
+                    } else {
+                        fotoPreview.src = '';
+                        fotoPreview.style.display = 'none';
+                        fotoPlaceholder.style.display = 'block';
+                    }
+
+                    if (aluno.tem_apple_id) {
+                        document.getElementById('appleIdSim').checked = true;
+                        document.getElementById('apple_id_input').disabled = false;
+                        document.getElementById('apple_id_input').required = true;
+                        document.getElementById('apple_id_input').value = aluno.apple_id || '';
+                    } else {
+                        document.getElementById('appleIdNao').checked = true;
+                        document.getElementById('apple_id_input').disabled = true;
+                        document.getElementById('apple_id_input').required = false;
+                        document.getElementById('apple_id_input').value = '';
+                    }
+
+                    document.getElementById('modalAlunoTitle').textContent = 'Editar Aluno';
+
+                    // Abrir modal usando Bootstrap 5 API
+                    const modalEl = document.getElementById('modalAluno');
+                    let modal = bootstrap.Modal.getInstance(modalEl);
+                    if (!modal) {
+                        modal = new bootstrap.Modal(modalEl);
+                    }
+                    modal.show();
+
+                } else {
+                    alert('Erro ao carregar aluno: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao carregar aluno. Verifique o console para mais detalhes.');
+            });
+    }
+
+    // Excluir aluno
+    function excluirAluno(alunoId, alunoNome) {
+        if (confirm(`Tem certeza que deseja excluir o aluno "${alunoNome}"? Esta ação não pode ser desfeita.`)) {
+            fetch(`/api/alunos/${alunoId}`, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao excluir aluno. Verifique o console para mais detalhes.');
+                });
+        }
+    }
+
+    // Download template
+    function downloadTemplate(tipo) {
+        window.open(`/api/download/template/${tipo}`, '_blank');
+    }
+
+    // Importar alunos
+    document.getElementById('formImportarAlunos').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        fetch('/api/importar/alunos', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    let message = result.message;
+                    if (result.detalhes.erros.length > 0) {
+                        message += '\n\nErros encontrados:\n' + result.detalhes.erros.join('\n');
+                    }
+                    alert(message);
+
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportarAlunos'));
+                    modal.hide();
+
+                    if (result.detalhes.sucessos > 0) {
+                        location.reload();
+                    }
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro na importação. Verifique o console para mais detalhes.');
+            });
+    });
+
+    // Preencher data atual como padrão
+    document.addEventListener('DOMContentLoaded', function () {
+        const dataInicio = document.getElementById('data_inicio_aluno');
+        if (dataInicio && !dataInicio.value) {
+            const today = new Date().toISOString().split('T')[0];
+            dataInicio.value = today;
+        }
+    });
+
+    // Funções para seleção múltipla e exclusão em lote
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateDeleteButton();
+    }
+
+    function updateDeleteButton() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        const btnDelete = document.getElementById('btnDeleteSelected');
+
+        if (checkboxes.length > 0) {
+            btnDelete.style.display = 'inline-block';
+            btnDelete.textContent = `Excluir ${checkboxes.length} selecionado(s)`;
+        } else {
+            btnDelete.style.display = 'none';
+        }
+
+        // Atualizar estado do checkbox "selecionar todos"
+        const allCheckboxes = document.querySelectorAll('.student-checkbox');
+        const selectAll = document.getElementById('selectAll');
+
+        if (allCheckboxes.length > 0) {
+            selectAll.checked = checkboxes.length === allCheckboxes.length;
+        }
+    }
+
+    function deleteSelected() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value);
+
+        if (ids.length === 0) return;
+
+        if (confirm(`Deseja realmente excluir ${ids.length} aluno(s) selecionado(s)?`)) {
+            let deletedCount = 0;
+            let errors = [];
+
+            const promises = ids.map(id => {
+                return fetch(`/api/alunos/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            deletedCount++;
+                        } else {
+                            errors.push(`ID ${id}: ${result.message}`);
+                        }
+                    })
+                    .catch(error => {
+                        errors.push(`ID ${id}: ${error}`);
+                    });
+            });
+
+            Promise.all(promises).then(() => {
+                if (errors.length > 0) {
+                    alert(`${deletedCount} aluno(s) excluído(s) com sucesso.\nErros:\n${errors.join('\n')}`);
+                } else {
+                    alert(`${deletedCount} aluno(s) excluído(s) com sucesso!`);
+                }
+                location.reload();
+            });
+        }
+    }
+
+    // Função para preview de foto
+    function previewFoto(input) {
+        const fotoPreview = document.getElementById('foto_preview');
+        const fotoPlaceholder = document.getElementById('foto_placeholder');
+
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                fotoPreview.src = e.target.result;
+                fotoPreview.style.display = 'block';
+                fotoPlaceholder.style.display = 'none';
+            }
+
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Limpar modal ao abrir para novo cadastro
+    document.getElementById('modalAluno').addEventListener('show.bs.modal', function (event) {
+        // Se não for edição (verificado pelo título ou botão que abriu)
+        // Mas como usamos a mesma função editarAluno para preencher, podemos limpar se o ID estiver vazio
+        // Melhor: adicionar um listener no botão "Novo Aluno" para limpar
+    });
+
+    // Adicionar listener no botão Novo Aluno
+    document.querySelector('[data-bs-target="#modalAluno"]').addEventListener('click', function () {
+        document.getElementById('formAluno').reset();
+        document.getElementById('aluno_id').value = '';
+        document.getElementById('modalAlunoTitle').textContent = 'Cadastrar Aluno';
+
+        // Resetar foto
+        document.getElementById('foto_preview').src = '';
+        document.getElementById('foto_preview').style.display = 'none';
+        document.getElementById('foto_placeholder').style.display = 'block';
+
+        // Resetar Apple ID
+        document.getElementById('appleIdNao').checked = true;
+        document.getElementById('apple_id_input').disabled = true;
+
+        // Data atual
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('data_inicio_aluno').value = today;
+    });
+</script>
+
+<style>
+    .page-item.active .page-link {
+        background-color: #000000;
+        border-color: #000000;
+    }
+
+    .page-link {
+        color: #000000;
+    }
+
+    .page-link:hover {
+        color: #000000;
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+
+    .pagination {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}

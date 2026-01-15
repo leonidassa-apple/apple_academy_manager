@@ -1,0 +1,1380 @@
+:root {
+    /* Cores oficiais Apple - Light Mode */
+    --apple-primary: #000000;
+    --apple-white: #ffffff;
+    --apple-gray: #f5f5f7;
+    --apple-light-gray: #d2d2d7;
+    --apple-dark-gray: #86868b;
+    --apple-red: #ff3b30;
+    --apple-orange: #ff9500;
+    --apple-yellow: #ffcc00;
+    --apple-green: #34c759;
+    --apple-mint: #00c7be;
+    --apple-teal: #30b0c7;
+    --apple-cyan: #32ade6;
+    --apple-blue: #007aff;
+    --apple-indigo: #5856d6;
+    --apple-purple: #af52de;
+    --apple-pink: #ff2d55;
+    --apple-brown: #a2845e;
+
+    /* Cores de fundo e texto - Light Mode */
+    --bg-color: var(--apple-white);
+    --text-color: var(--apple-primary);
+    --card-bg: var(--apple-white);
+    --sidebar-bg: var(--apple-white);
+    --navbar-bg: var(--apple-white);
+    --border-color: var(--apple-light-gray);
+    --stat-card-bg: var(--apple-white);
+    --table-header-bg: var(--apple-gray);
+    --table-row-hover: var(--apple-gray);
+    --modal-bg: var(--apple-white);
+    --input-bg: var(--apple-white);
+    --input-text: var(--apple-primary);
+    --input-border: var(--apple-light-gray);
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --shadow-hover: rgba(0, 0, 0, 0.12);
+}
+
+
+
+
+
+
+
+/* Fontes Apple - San Francisco e fallbacks */
+@font-face {
+    font-family: 'SF Pro Display';
+    src: url('https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sanfranciscodisplay-regular-webfont.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'SF Pro Display';
+    src: url('https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sanfranciscodisplay-medium-webfont.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'SF Pro Display';
+    src: url('https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sanfranciscodisplay-semibold-webfont.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'SF Pro Display';
+    src: url('https://applesocial.s3.amazonaws.com/assets/styles/fonts/sanfrancisco/sanfranciscodisplay-bold-webfont.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Sistema de fontes Apple */
+body {
+    background-color: var(--bg-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: var(--text-color);
+    line-height: 1.4;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Aplicar font-weight adequado para diferentes elementos */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.fw-bold {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+.navbar-brand {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+
+.stat-number {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.card-title,
+.modal-title {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+
+.table th {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+}
+
+/* ============================================
+   BOTÕES APPLE MODERNOS - ESTILO ATUALIZADO
+   ============================================ */
+
+/* Botão Primário Apple - Estilo Moderno */
+.btn-apple {
+    background-color: var(--apple-primary);
+    color: var(--apple-white);
+    border: none;
+    border-radius: 980px;
+    /* Cantos super arredondados estilo Apple */
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 17px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn-apple:hover {
+    background-color: var(--apple-primary);
+    color: var(--apple-white);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.btn-apple:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-apple:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.3);
+}
+
+/* Botão Outline Apple - Estilo Moderno */
+.btn-apple-outline {
+    background-color: transparent;
+    color: var(--apple-primary);
+    border: 2px solid var(--apple-primary);
+    border-radius: 980px;
+    padding: 10px 22px;
+    font-weight: 600;
+    font-size: 17px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn-apple-outline:hover {
+    background-color: var(--apple-primary);
+    color: var(--apple-white);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.btn-apple-outline:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Botão Secundário Apple */
+.btn-apple-secondary {
+    background-color: var(--apple-gray);
+    color: var(--apple-primary);
+    border: none;
+    border-radius: 980px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 17px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn-apple-secondary:hover {
+    background-color: var(--apple-light-gray);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Botão Destructive (Vermelho) */
+.btn-apple-destructive {
+    background-color: var(--apple-red);
+    color: var(--apple-white);
+    border: none;
+    border-radius: 980px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 17px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn-apple-destructive:hover {
+    background-color: #d70015;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 59, 48, 0.3);
+}
+
+/* Botão Success (Verde) */
+.btn-apple-success {
+    background-color: var(--apple-green);
+    color: var(--apple-white);
+    border: none;
+    border-radius: 980px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 17px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn-apple-success:hover {
+    background-color: #30a14e;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 199, 89, 0.3);
+}
+
+/* Botão Ghost (Transparente) */
+.btn-apple-ghost {
+    background-color: transparent;
+    color: var(--apple-primary);
+    border: none;
+    border-radius: 980px;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 17px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn-apple-ghost:hover {
+    background-color: var(--apple-gray);
+    transform: translateY(-2px);
+}
+
+/* Tamanhos de Botão */
+.btn-apple-sm {
+    padding: 8px 16px;
+    font-size: 15px;
+}
+
+.btn-apple-lg {
+    padding: 16px 32px;
+    font-size: 19px;
+}
+
+/* Botão com ícone */
+.btn-apple i,
+.btn-apple-outline i,
+.btn-apple-secondary i,
+.btn-apple-destructive i,
+.btn-apple-success i,
+.btn-apple-ghost i {
+    font-size: 16px;
+    transition: transform 0.3s ease;
+}
+
+.btn-apple:hover i,
+.btn-apple-outline:hover i,
+.btn-apple-secondary:hover i,
+.btn-apple-destructive:hover i,
+.btn-apple-success:hover i,
+.btn-apple-ghost:hover i {
+    transform: translateX(2px);
+}
+
+/* Efeito de ripple para botões */
+.btn-apple::after,
+.btn-apple-outline::after,
+.btn-apple-secondary::after,
+.btn-apple-destructive::after,
+.btn-apple-success::after,
+.btn-apple-ghost::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-apple:active::after,
+.btn-apple-outline:active::after,
+.btn-apple-secondary:active::after,
+.btn-apple-destructive:active::after,
+.btn-apple-success:active::after,
+.btn-apple-ghost:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* ============================================
+   FORMULÁRIOS - REGRAS CORRIGIDAS
+   ============================================ */
+
+/* Formulários - Regras mais suaves */
+.form-control,
+.form-select {
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    border-color: var(--input-border);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    border-color: var(--apple-primary);
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}
+
+.form-control::placeholder {
+    color: var(--apple-dark-gray);
+    font-size: 0.8rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ============================================
+   ESTILOS PARA AGENDA
+   ============================================ */
+
+/* Widget de eventos no dashboard */
+#proximos-eventos-lista .list-group-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+    background-color: var(--card-bg);
+}
+
+#proximos-eventos-lista .list-group-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px var(--shadow-color);
+    cursor: pointer;
+}
+
+#proximos-eventos-lista .list-group-item h6 {
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+#proximos-eventos-lista .list-group-item .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+}
+
+/* Calendário no dashboard */
+#dashboard-calendar {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* Estilo para o calendário FullCalendar na página de agenda */
+.fc {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.fc-event {
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.fc-event:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.fc-daygrid-event {
+    white-space: normal;
+}
+
+.fc-toolbar-title {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    color: var(--text-color);
+}
+
+.fc-button {
+    background-color: var(--apple-primary) !important;
+    border-color: var(--apple-primary) !important;
+    font-weight: 500;
+    border-radius: 6px !important;
+}
+
+.fc-button:hover {
+    background-color: var(--apple-dark-gray) !important;
+    border-color: var(--apple-dark-gray) !important;
+}
+
+.fc-button-active {
+    background-color: var(--apple-blue) !important;
+    border-color: var(--apple-blue) !important;
+}
+
+.fc-button-primary:not(:disabled).fc-button-active {
+    background-color: var(--apple-blue) !important;
+    border-color: var(--apple-blue) !important;
+}
+
+/* Dias do calendário */
+.fc-day-today {
+    background-color: rgba(0, 122, 255, 0.1) !important;
+}
+
+.fc-daygrid-day-number {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* Header do calendário */
+.fc-col-header-cell {
+    background-color: var(--table-header-bg);
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+/* Animação de entrada para eventos */
+@keyframes fadeInEvent {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#proximos-eventos-lista .list-group-item {
+    animation: fadeInEvent 0.3s ease-in-out;
+}
+
+.form-label {
+    color: var(--text-color);
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    margin-bottom: 0.5rem;
+}
+
+/* ============================================
+   CORREÇÃO ESPECÍFICA PARA OS FILTROS
+   ============================================ */
+
+/* Garantir que os filtros fiquem alinhados horizontalmente */
+#filtersSection {
+    display: flex !important;
+    align-items: end !important;
+}
+
+#filtersSection .col-md-4,
+#filtersSection .col-md-3 {
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+/* Labels dos filtros */
+#filtersSection .form-label {
+    font-size: 0.875rem;
+    color: var(--apple-dark-gray);
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+/* Input groups nos filtros */
+#filtersSection .input-group {
+    display: flex;
+    align-items: stretch;
+}
+
+#filtersSection .form-control {
+    flex: 1;
+}
+
+/* Selects nos filtros */
+#filtersSection .form-select {
+    width: 100%;
+}
+
+/* ============================================
+   CORREÇÃO DO LAYOUT RESPONSIVO
+   ============================================ */
+
+@media (max-width: 768px) {
+    #filtersSection {
+        align-items: stretch !important;
+    }
+
+    #filtersSection .col-md-4,
+    #filtersSection .col-md-3 {
+        margin-bottom: 1rem;
+    }
+
+    #filtersSection .btn-apple-outline {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+
+/* Navbar Apple Style */
+.navbar {
+    background-color: var(--navbar-bg);
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--text-color) !important;
+    font-size: 1.2rem;
+    text-decoration: none;
+    transition: opacity 0.3s ease;
+}
+
+.navbar-brand:hover {
+    opacity: 0.8;
+    color: var(--text-color) !important;
+}
+
+.navbar-brand .bi-apple {
+    font-size: 1.3rem;
+    color: var(--text-color);
+    transition: transform 0.3s ease;
+}
+
+.navbar-brand:hover .bi-apple {
+    transform: scale(1.1);
+}
+
+/* Sidebar Apple Style */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    min-height: calc(100vh - 56px);
+    border-right: 1px solid var(--border-color);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.sidebar .nav-link {
+    color: var(--text-color);
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin: 4px 8px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.sidebar .nav-link:hover {
+    background-color: var(--apple-gray);
+    transform: translateX(4px);
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--apple-primary);
+    color: var(--apple-white);
+}
+
+.sidebar .nav-link i {
+    width: 20px;
+    text-align: center;
+    margin-right: 10px;
+}
+
+/* Cards Apple Style */
+.card {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px var(--shadow-color);
+    transition: all 0.3s ease;
+    background-color: var(--card-bg);
+}
+
+.card:hover {
+    box-shadow: 0 8px 24px var(--shadow-hover);
+    transform: translateY(-2px);
+}
+
+.stat-card {
+    transition: transform 0.3s ease;
+    background-color: var(--stat-card-bg);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+
+/* Tabelas Apple Style */
+.table {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    transition: background-color 0.3s ease;
+}
+
+.table th {
+    background-color: var(--table-header-bg);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    color: var(--text-color);
+    padding: 16px 12px;
+    font-size: 0.9rem;
+}
+
+.table td {
+    border-color: var(--border-color);
+    vertical-align: middle;
+    padding: 14px 12px;
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--table-row-hover);
+}
+
+/* Badges Apple Style */
+.badge {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.badge.bg-primary {
+    background-color: var(--apple-primary) !important;
+}
+
+.badge.bg-success {
+    background-color: var(--apple-green) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--apple-orange) !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--apple-red) !important;
+}
+
+.badge.bg-info {
+    background-color: var(--apple-cyan) !important;
+}
+
+/* Modais Apple Style */
+.modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    background-color: var(--modal-bg);
+    color: var(--text-color);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--modal-bg);
+    padding: 20px 24px;
+}
+
+.modal-title {
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.modal-body {
+    padding: 24px;
+    background-color: var(--modal-bg);
+    color: var(--text-color);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 20px 24px;
+    background-color: var(--modal-bg);
+}
+
+/* Alertas Apple Style */
+.alert {
+    border: none;
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.alert-success {
+    background-color: rgba(52, 199, 89, 0.1);
+    color: var(--apple-green);
+    border-left: 4px solid var(--apple-green);
+}
+
+.alert-danger {
+    background-color: rgba(255, 59, 48, 0.1);
+    color: var(--apple-red);
+    border-left: 4px solid var(--apple-red);
+}
+
+.alert-warning {
+    background-color: rgba(255, 149, 0, 0.1);
+    color: var(--apple-orange);
+    border-left: 4px solid var(--apple-orange);
+}
+
+.alert-info {
+    background-color: rgba(0, 122, 255, 0.1);
+    color: var(--apple-blue);
+    border-left: 4px solid var(--apple-blue);
+}
+
+/* Tabs Apple Style */
+.nav-tabs {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: var(--apple-dark-gray);
+    padding: 12px 24px;
+    font-weight: 500;
+    border-radius: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--apple-primary);
+    background-color: transparent;
+}
+
+.nav-tabs .nav-link.active {
+    background: none;
+    border-bottom: 2px solid var(--apple-primary);
+    color: var(--apple-primary);
+    font-weight: 600;
+}
+
+/* Login Screen Apple Style */
+.login-container {
+    background: linear-gradient(135deg, var(--apple-white) 0%, var(--apple-gray) 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.login-logo {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.logo-large {
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: -0.5px;
+}
+
+.logo-subtitle {
+    color: var(--apple-dark-gray);
+    font-size: 1.1rem;
+    font-weight: 400;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Dashboard Stats */
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1;
+}
+
+.stat-label {
+    color: var(--apple-dark-gray);
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+
+/* Loading Animation */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(10px);
+}
+
+background: rgba(0, 0, 0, 0.9);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--apple-gray);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--apple-dark-gray);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--apple-primary);
+}
+
+/* Pagination */
+.page-item.active .page-link {
+    background-color: var(--apple-primary);
+    border-color: var(--apple-primary);
+}
+
+.page-link {
+    color: var(--apple-primary);
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.page-link:hover {
+    color: var(--apple-primary);
+    background-color: var(--apple-gray);
+    border-color: var(--border-color);
+}
+
+/* Text Muted */
+.text-muted {
+    color: var(--apple-dark-gray) !important;
+}
+
+/* Border Bottom */
+.border-bottom {
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* Card Header Transparent */
+.card-header.bg-transparent {
+    background-color: transparent !important;
+    border-bottom-color: var(--border-color) !important;
+    color: var(--text-color) !important;
+}
+
+
+/* Ajuste para autocomplete do navegador */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px var(--input-bg) inset !important;
+    -webkit-text-fill-color: var(--input-text) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+    .navbar-brand span {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar-brand span {
+        font-size: 0.9rem;
+    }
+
+    .sidebar {
+        min-height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 56px;
+        z-index: 100;
+        background-color: var(--sidebar-bg);
+    }
+
+    .sidebar .nav {
+        flex-direction: row;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .sidebar .nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .sidebar .nav-link {
+        white-space: nowrap;
+        margin: 4px;
+        padding: 10px 16px;
+    }
+
+    .stat-card .card-body {
+        padding: 1.5rem 1rem;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .btn-apple,
+    .btn-apple-outline,
+    .btn-apple-secondary,
+    .btn-apple-destructive,
+    .btn-apple-success,
+    .btn-apple-ghost {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .navbar-nav {
+        gap: 0.5rem !important;
+    }
+
+
+    .user-dropdown-toggle {
+        font-size: 0.875rem;
+        padding: 6px 10px;
+    }
+
+    .user-dropdown-toggle span,
+    .user-dropdown-toggle .fa-chevron-down {
+        display: none;
+    }
+
+    main {
+        padding: 1rem !important;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        font-size: 0.85rem;
+    }
+
+    .navbar-brand .bi-apple {
+        font-size: 1.1rem;
+    }
+
+    .navbar-brand span {
+        display: none;
+    }
+
+    .stat-number {
+        font-size: 1.75rem;
+    }
+
+    .card-body {
+        padding: 1rem !important;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 8px 6px;
+        font-size: 0.8rem;
+    }
+
+    .modal-body {
+        padding: 1rem !important;
+    }
+
+    .modal-header,
+    .modal-footer {
+        padding: 1rem !important;
+    }
+}
+
+/* Transições suaves para todos os elementos */
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Correção para formulários no dark mode */
+background-color: #2c2c2e !important;
+color: #ffffff !important;
+border-color: #3c3c3e !important;
+}
+
+color: #98989d !important;
+}
+
+color: #ffffff !important;
+}
+
+/* Correção específica para modais no dark mode */
+background-color: #1c1c1e;
+color: #ffffff;
+}
+
+border-color: #2c2c2e;
+}
+
+color: #ffffff;
+}
+
+/* Correção para tabelas no dark mode */
+color: #ffffff;
+}
+
+background-color: #2c2c2e;
+color: #ffffff;
+border-color: #3c3c3e;
+}
+
+border-color: #3c3c3e;
+color: #ffffff;
+}
+
+/* Correção para cards no dark mode */
+background-color: #1c1c1e;
+color: #ffffff;
+}
+
+background-color: #2c2c2e !important;
+color: #ffffff !important;
+border-color: #3c3c3e !important;
+}
+
+/* Garantir que todos os textos sejam legíveis */
+color: #98989d !important;
+}
+
+/* Correção para dropdowns */
+background-color: #2c2c2e;
+border-color: #3c3c3e;
+}
+
+color: #ffffff;
+font-family: -apple-system,
+BlinkMacSystemFont,
+'SF Pro Display',
+'Segoe UI',
+Roboto,
+sans-serif;
+}
+
+background-color: #3c3c3e;
+color: #ffffff;
+}
+
+/* ============================================
+   DROPDOWNS - ESTILO SIMPLIFICADO E CONSISTENTE
+   ============================================ */
+
+/* Dropdown Base Style */
+.dropdown-menu {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px var(--shadow-color);
+    padding: 8px;
+    min-width: 160px;
+    margin-top: 8px;
+}
+
+.dropdown-item {
+    color: var(--text-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 2px 0;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background-color: var(--apple-gray);
+    color: var(--text-color);
+    transform: translateX(4px);
+}
+
+.dropdown-item.active {
+    background-color: var(--apple-primary);
+    color: var(--apple-white);
+}
+
+.dropdown-item.active i {
+    color: var(--apple-white);
+}
+
+.dropdown-item i {
+    width: 16px;
+    text-align: center;
+    margin-right: 10px;
+    font-size: 14px;
+    color: inherit;
+}
+
+.dropdown-divider {
+    border-color: var(--border-color);
+    margin: 8px 0;
+}
+
+/* Botões de dropdown */
+.user-dropdown-toggle,
+.theme-dropdown-toggle {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+}
+
+.user-dropdown-toggle:hover,
+.theme-dropdown-toggle:hover {
+    background-color: var(--apple-gray);
+    border-color: var(--apple-primary);
+}
+
+.user-dropdown-toggle:focus,
+.theme-dropdown-toggle:focus {
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}
+
+/* Remove seta padrão do Bootstrap */
+.user-dropdown-toggle::after,
+.theme-dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Ícones nos botões */
+.user-dropdown-toggle i,
+.theme-dropdown-toggle i {
+    margin-right: 6px;
+    font-size: 14px;
+}
+
+.theme-dropdown-toggle .fa-palette {
+    color: var(--apple-primary);
+}
+
+.user-dropdown-toggle .fa-user-circle {
+    color: var(--apple-primary);
+}
+
+/* Texto do tema atual */
+#currentThemeText {
+    font-size: 14px;
+    margin-left: 4px;
+}
+
+/* Dark Mode - Ajustes simples */
+background-color: #2c2c2e;
+border-color: #3c3c3e;
+}
+
+color: #ffffff;
+}
+
+background-color: #3c3c3e;
+color: #ffffff;
+}
+
+background-color: var(--apple-primary);
+color: var(--apple-white);
+}
+
+background-color: #2c2c2e;
+border-color: #3c3c3e;
+color: #ffffff;
+}
+
+background-color: #3c3c3e;
+}
+
+/* ============================================
+   CORREÇÃO DO DROPDOWN DE TEMAS - IGUAL AO USUÁRIO
+   ============================================ */
+
+/* Remove estilos específicos antigos do theme-dropdown */
+.theme-dropdown,
+.theme-dropdown-toggle {
+    display: none;
+    /* Esconde a versão antiga */
+}
+
+/* Garante que o dropdown de temas use a mesma classe do usuário */
+#themeDropdown {
+    background: none !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-color) !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    text-decoration: none !important;
+    font-size: 14px !important;
+    cursor: pointer !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif !important;
+}
+
+#themeDropdown:hover {
+    background-color: var(--apple-gray) !important;
+    border-color: var(--apple-primary) !important;
+}
+
+#themeDropdown:focus {
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2) !important;
+}
+
+/* Remove seta padrão do Bootstrap do tema dropdown */
+#themeDropdown::after {
+    display: none !important;
+}
+
+/* Ícones específicos do tema dropdown */
+#themeDropdown .fa-palette {
+    color: var(--apple-primary) !important;
+    margin-right: 6px !important;
+    font-size: 14px !important;
+}
+
+/* Ajuste do texto do tema atual */
+#currentThemeText {
+    font-size: 14px !important;
+    margin-left: 4px !important;
+}
+
+/* ============================================
+   RODAPÉ PROFISSIONAL
+   ============================================ */
+
+.footer {
+    background-color: #ffffff;
+    border-top: 1px solid #d2d2d7 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    font-size: 0.875rem;
+    margin-top: auto;
+}
+
+.footer .text-muted {
+    color: #86868b !important;
+    font-weight: 500;
+}
+
+.footer .bi-apple {
+    color: #000000;
+    font-size: 1rem;
+}
+
+/* Garante que o corpo ocupe toda a altura da viewport */
+.min-vh-100 {
+    min-height: 100vh;
+}
+
+.flex-grow-1 {
+    flex-grow: 1;
+}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h2 fw-bold">Catálogo de Livros</h1>
+</div>
+
+<!-- Search Bar -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+            <input type="text" class="form-control border-start-0 ps-0" id="searchBook"
+                placeholder="Buscar por título, autor ou ISBN...">
+        </div>
+    </div>
+</div>
+
+<!-- Books Grid -->
+<div class="row row-cols-1 row-cols-md-3 g-4" id="booksGrid">
+    {% for livro in livros %}
+    <div class="col book-item" data-title="{{ livro.titulo }}" data-autor="{{ livro.autor }}"
+        data-isbn="{{ livro.isbn }}">
+        <div class="card h-100 border-0 shadow-sm hover-card">
+            <div class="row g-0 h-100">
+                <div
+                    class="col-md-4 d-flex align-items-center justify-content-center bg-light rounded-start text-secondary">
+                    {% if livro.foto_path %}
+                    <img src="{{ url_for('uploaded_file', filename=livro.foto_path) }}"
+                        class="img-fluid rounded-start h-100 object-fit-cover" alt="{{ livro.titulo }}">
+                    {% else %}
+                    <i class="fas fa-book fa-3x"></i>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-1">{{ livro.titulo }}</h5>
+                        <p class="card-text text-muted small mb-2">{{ livro.autor }}</p>
+
+                        <div class="mb-2">
+                            <span class="badge bg-light text-dark border">{{ livro.categoria or 'Geral' }}</span>
+                        </div>
+
+                        <p class="card-text small mb-0">
+                            <strong>ISBN:</strong> {{ livro.isbn or 'N/A' }}<br>
+                            <strong>Editora:</strong> {{ livro.editora or 'N/A' }} ({{ livro.ano or '-' }})
+                        </p>
+
+                        <div class="mt-3">
+                            {% if livro.disponiveis > 0 %}
+                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>{{ livro.disponiveis
+                                }} Disponíveis</span>
+                            {% else %}
+                            <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Indisponível</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5">
+        <div class="text-muted">
+            <i class="fas fa-book-open fa-3x mb-3"></i>
+            <p>Nenhum livro encontrado no catálogo.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('searchBook').addEventListener('keyup', function () {
+        const value = this.value.toLowerCase();
+        const books = document.querySelectorAll('.book-item');
+
+        books.forEach(book => {
+            const title = book.getAttribute('data-title').toLowerCase();
+            const autor = book.getAttribute('data-autor').toLowerCase();
+            const isbn = (book.getAttribute('data-isbn') || '').toLowerCase();
+
+            if (title.includes(value) || autor.includes(value) || isbn.includes(value)) {
+                book.style.display = '';
+            } else {
+                book.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

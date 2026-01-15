@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Painel de Administração</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_backups') }}" class="btn btn-apple-outline me-2">
+            <i class="fas fa-database me-2"></i>Backups
+        </a>
+        <button type="button" class="btn btn-apple" data-bs-toggle="modal" data-bs-target="#modalUsuario">
+            <i class="fas fa-plus me-2"></i>Novo Usuário
+        </button>
+    </div>
+</div>
+
+<!-- Estatísticas do Sistema -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h4 class="mb-4 fw-bold">Visão Geral do Sistema</h4>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-primary">{{ total_usuarios }}</div>
+                <div class="stat-label">Total de Usuários</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-success">{{ admin_users }}</div>
+                <div class="stat-label">Administradores</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-info">{{ common_users }}</div>
+                <div class="stat-label">Usuários Comuns</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body text-center">
+                <div class="stat-number text-warning">{{ total_tipos }}</div>
+                <div class="stat-label">Tipos de Devices</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações Rápidas -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h4 class="mb-4 fw-bold">Ações Rápidas</h4>
+    </div>
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('admin_usuarios') }}" class="card stat-card h-100 text-decoration-none">
+            <div class="card-body text-center">
+                <div class="stat-number text-primary">
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+                <div class="stat-label">Gerenciar Usuários</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('admin_backups') }}" class="card stat-card h-100 text-decoration-none">
+            <div class="card-body text-center">
+                <div class="stat-number text-success">
+                    <i class="fas fa-download fa-2x"></i>
+                </div>
+                <div class="stat-label">Gerenciar Backups</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('admin_tipos_devices') }}" class="card stat-card h-100 text-decoration-none">
+            <div class="card-body text-center">
+                <div class="stat-number text-warning">
+                    <i class="fas fa-mobile-alt fa-2x"></i>
+                </div>
+                <div class="stat-label">Tipos de Devices</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Últimos Usuários Cadastrados -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent border-bottom-0">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="fas fa-clock me-2"></i>Últimos Usuários Cadastrados
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Usuário</th>
+                                <th>Perfil</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_users %}
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>{{ user[0] }}</td>
+                                <td>{{ user[1] }}</td>
+                                <td>
+                                    <span
+                                        class="badge {% if user[3] == 'admin' %}bg-primary{% else %}bg-info{% endif %}">
+                                        {{ user[3] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-apple-outline" onclick="resetarSenha({{ user[0] }})">
+                                        <i class="fas fa-key me-1"></i>Resetar Senha
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="fas fa-users fa-2x mb-2 d-block"></i>
+                                    Nenhum usuário cadastrado
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Criar Usuário -->
+<div class="modal fade" id="modalUsuario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Criar Novo Usuário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formUsuario">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome de Usuário</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Senha</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Perfil</label>
+                        <select class="form-select" name="role" required>
+                            <option value="user">Usuário</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">Criar Usuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Criar usuário
+    document.getElementById('formUsuario').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = {
+            username: formData.get('username'),
+            password: formData.get('password'),
+            role: formData.get('role')
+        };
+
+        fetch('/admin/criar-usuario', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('Usuário criado com sucesso!');
+                    // Fechar modal usando Bootstrap JavaScript nativo
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalUsuario'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao criar usuário: ' + error);
+            });
+    });
+
+    // Resetar senha
+    function resetarSenha(userId) {
+        if (confirm('Deseja resetar a senha deste usuário para "123456"?')) {
+            fetch('/admin/resetar-senha', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_id: userId })
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao resetar senha: ' + error);
+                });
+        }
+    }
+</script>
+{% endblock %}

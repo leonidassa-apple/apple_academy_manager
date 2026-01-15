@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Gerenciamento de Tipos de Devices</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin') }}" class="btn btn-apple-outline me-2">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+        <button type="button" class="btn btn-apple-outline me-2" onclick="downloadTemplate()">
+            <i class="fas fa-download me-2"></i>Baixar Template
+        </button>
+        <button type="button" class="btn btn-apple-outline me-2" data-bs-toggle="modal"
+            data-bs-target="#modalImportarTipos">
+            <i class="fas fa-file-import me-2"></i>Importar
+        </button>
+        <button type="button" class="btn btn-apple" data-bs-toggle="modal" data-bs-target="#modalTipo">
+            <i class="fas fa-plus me-2"></i>Novo Tipo
+        </button>
+    </div>
+</div>
+
+<!-- Mensagem de loading/erro -->
+<div id="loadingMessage" class="alert alert-info">
+    <i class="fas fa-spinner fa-spin me-2"></i>Carregando tipos de devices...
+</div>
+
+<div id="errorMessage" class="alert alert-danger d-none">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <span id="errorText">Erro ao carregar dados</span>
+</div>
+
+<!-- Filtros e Busca -->
+<div class="row mb-4 align-items-end" id="filtersSection">
+    <div class="col-md-4">
+        <div class="d-flex flex-column h-100">
+            <label class="form-label small text-muted mb-1">Buscar tipo</label>
+            <div class="input-group flex-nowrap">
+                <input type="text" class="form-control" id="searchTipo" placeholder="Buscar tipo...">
+                <button class="btn btn-apple-outline" type="button" onclick="filterTipos()">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="d-flex flex-column h-100">
+            <label class="form-label small text-muted mb-1">Categoria</label>
+            <select class="form-select" id="filterCategoria">
+                <option value="">Todas as categorias</option>
+                <option value="Smartphone">Smartphone</option>
+                <option value="Tablet">Tablet</option>
+                <option value="Notebook">Notebook</option>
+                <option value="Desktop">Desktop</option>
+                <option value="Wearable">Wearable</option>
+                <option value="VR/AR">VR/AR</option>
+                <option value="Acessório">Acessório</option>
+                <option value="Áudio">Áudio</option>
+                <option value="Outros">Outros</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="d-flex flex-column h-100">
+            <label class="form-label small text-muted mb-1">Itens por página</label>
+            <select class="form-select" id="itemsPerPage" onchange="changeItemsPerPage()">
+                <option value="10">10 por página</option>
+                <option value="20">20 por página</option>
+                <option value="50">50 por página</option>
+                <option value="100">100 por página</option>
+            </select>
+        </div>
+    </div>
+</div>
+<!-- Tabela de Tipos -->
+<div class="card" id="tableSection" style="display: none;">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Categoria</th>
+                        <th>Descrição</th>
+                        <th>Para Empréstimo</th>
+                        <th>Data Cadastro</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tiposTableBody">
+                    <!-- Os tipos serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginação -->
+        <nav aria-label="Navegação de páginas">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- A paginação será gerada via JavaScript -->
+            </ul>
+        </nav>
+
+        <!-- Informações da página -->
+        <div class="text-center text-muted mt-2">
+            <small id="pageInfo">Mostrando 0 de 0 tipos</small>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Tipo -->
+<div class="modal fade" id="modalTipo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTipoTitle">Cadastrar Tipo de Device</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formTipo">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="tipo_id" id="tipo_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Tipo *</label>
+                        <input type="text" class="form-control" name="nome" id="nome_tipo" required
+                            placeholder="Ex: iPhone 15 Pro, MacBook Pro M2">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Categoria *</label>
+                        <select class="form-select" name="categoria" id="categoria_tipo" required>
+                            <option value="">Selecione...</option>
+                            <option value="Smartphone">Smartphone</option>
+                            <option value="Tablet">Tablet</option>
+                            <option value="Notebook">Notebook</option>
+                            <option value="Desktop">Desktop</option>
+                            <option value="Wearable">Wearable</option>
+                            <option value="VR/AR">VR/AR</option>
+                            <option value="Acessório">Acessório</option>
+                            <option value="Áudio">Áudio</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" name="descricao" id="descricao_tipo" rows="3"
+                            placeholder="Descrição do tipo de device"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Para Empréstimo *</label>
+                        <select class="form-select" name="para_emprestimo" id="para_emprestimo_tipo" required>
+                            <option value="true" selected>Sim</option>
+                            <option value="false">Não</option>
+                        </select>
+                        <div class="form-text">
+                            Se "Não", este tipo não aparecerá para empréstimo
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">* Campos obrigatórios</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-save me-2"></i>Salvar Tipo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Importar Tipos -->
+<div class="modal fade" id="modalImportarTipos" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importar Tipos de Devices</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formImportarTipos" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Selecione o arquivo</label>
+                        <input type="file" class="form-control" name="file" accept=".xlsx,.xls,.csv" required>
+                        <div class="form-text">
+                            Formatos suportados: Excel (.xlsx, .xls) ou CSV (.csv)
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">Estrutura esperada do arquivo:</h6>
+                        <small>
+                            <strong>Colunas obrigatórias:</strong> nome<br>
+                            <strong>Colunas opcionais:</strong> categoria, descricao, para_emprestimo<br>
+                            <strong>Valores para categoria:</strong> "Smartphone", "Tablet", "Notebook", "Desktop",
+                            "Wearable", "VR/AR", "Acessório", "Áudio", "Outros"<br>
+                            <strong>Valores para para_emprestimo:</strong> "Sim"/"Não" ou True/False
+                        </small>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="downloadTemplate()">
+                            <i class="fas fa-download me-1"></i>Baixar Template
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">
+                        <i class="fas fa-upload me-2"></i>Importar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Variáveis globais para paginação
+    let currentPage = 1;
+    let itemsPerPage = 10;
+    let allTipos = [];
+    let filteredTipos = [];
+
+    // Inicializar quando o DOM estiver carregado
+    document.addEventListener('DOMContentLoaded', function () {
+        loadTiposFromAPI();
+        setupEventListeners();
+        setupModalEvents();
+    });
+
+    function setupEventListeners() {
+        // Busca em tempo real
+        document.getElementById('searchTipo').addEventListener('input', filterTipos);
+
+        // Filtro por categoria
+        document.getElementById('filterCategoria').addEventListener('change', filterTipos);
+    }
+
+    // Configurar eventos dos modais
+    function setupModalEvents() {
+        // Limpar formulário quando modal for fechado
+        const modalTipo = document.getElementById('modalTipo');
+        if (modalTipo) {
+            modalTipo.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('formTipo').reset();
+                document.getElementById('tipo_id').value = '';
+                document.getElementById('modalTipoTitle').textContent = 'Cadastrar Tipo de Device';
+            });
+        }
+    }
+
+    // Carregar tipos da API
+    function loadTiposFromAPI() {
+        showLoading(true);
+
+        fetch('/api/tipos-devices')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na resposta da API: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (result.success) {
+                    allTipos = result.data.map(tipo => ({
+                        id: tipo.id,
+                        nome: tipo.nome || '',
+                        categoria: tipo.categoria || 'Outros',
+                        descricao: tipo.descricao || '',
+                        para_emprestimo: tipo.para_emprestimo ? 'Sim' : 'Não',
+                        data_cadastro: tipo.data_cadastro || tipo.data_criacao || 'N/A'
+                    }));
+
+                    filteredTipos = [...allTipos];
+                    showContent();
+                    renderTable();
+                } else {
+                    throw new Error(result.message || 'Erro ao carregar tipos');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar tipos:', error);
+                showError('Erro ao carregar tipos de devices: ' + error.message);
+            });
+    }
+
+    // Mostrar/ocultar loading e conteúdo
+    function showLoading(show) {
+        document.getElementById('loadingMessage').style.display = show ? 'block' : 'none';
+        document.getElementById('filtersSection').style.display = show ? 'none' : 'block';
+        document.getElementById('tableSection').style.display = show ? 'none' : 'block';
+        document.getElementById('errorMessage').classList.add('d-none');
+    }
+
+    function showError(message) {
+        showLoading(false);
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('filtersSection').style.display = 'none';
+        document.getElementById('tableSection').style.display = 'none';
+        document.getElementById('errorText').textContent = message;
+        document.getElementById('errorMessage').classList.remove('d-none');
+    }
+
+    function showContent() {
+        showLoading(false);
+    }
+
+    // Filtrar tipos
+    function filterTipos() {
+        const searchTerm = document.getElementById('searchTipo').value.toLowerCase();
+        const categoriaFilter = document.getElementById('filterCategoria').value;
+
+        filteredTipos = allTipos.filter(tipo => {
+            const matchesSearch =
+                tipo.nome.toLowerCase().includes(searchTerm) ||
+                tipo.categoria.toLowerCase().includes(searchTerm) ||
+                (tipo.descricao && tipo.descricao.toLowerCase().includes(searchTerm));
+
+            const matchesCategoria = !categoriaFilter || tipo.categoria === categoriaFilter;
+
+            return matchesSearch && matchesCategoria;
+        });
+
+        currentPage = 1;
+        renderTable();
+    }
+
+    // Mudar quantidade de itens por página
+    function changeItemsPerPage() {
+        itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+        currentPage = 1;
+        renderTable();
+    }
+
+    // Renderizar tabela com paginação
+    function renderTable() {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const currentTipos = filteredTipos.slice(startIndex, endIndex);
+
+        const tbody = document.getElementById('tiposTableBody');
+        tbody.innerHTML = '';
+
+        if (currentTipos.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="fas fa-mobile-alt fa-2x mb-2 d-block"></i>
+                    Nenhum tipo encontrado
+                </td>
+            </tr>
+        `;
+        } else {
+            currentTipos.forEach(tipo => {
+                const row = `
+                <tr>
+                    <td><strong>${escapeHtml(tipo.nome)}</strong></td>
+                    <td>
+                        <span class="badge bg-info">${escapeHtml(tipo.categoria)}</span>
+                    </td>
+                    <td>${escapeHtml(tipo.descricao) || '-'}</td>
+                    <td>
+                        <span class="badge ${tipo.para_emprestimo === 'Sim' ? 'bg-success' : 'bg-secondary'}">
+                            ${tipo.para_emprestimo}
+                        </span>
+                    </td>
+                    <td>${escapeHtml(tipo.data_cadastro)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-apple-outline" onclick="editarTipo(${tipo.id})">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="excluirTipo(${tipo.id}, '${escapeHtml(tipo.nome).replace(/'/g, "\\'")}')">
+                                <i class="fas fa-trash me-1"></i>Excluir
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        renderPagination();
+        updatePageInfo();
+    }
+
+    // Função para escapar HTML (prevenção XSS)
+    function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return '';
+        return unsafe
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Renderizar paginação
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredTipos.length / itemsPerPage);
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Botão Anterior
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;" aria-label="Anterior">
+            <span aria-hidden="true">&laquo;</span>
+        </a>
+    `;
+        pagination.appendChild(prevLi);
+
+        // Páginas
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            pageLi.innerHTML = `
+            <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+        `;
+            pagination.appendChild(pageLi);
+        }
+
+        // Botão Próximo
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `
+        <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;" aria-label="Próximo">
+            <span aria-hidden="true">&raquo;</span>
+        </a>
+    `;
+        pagination.appendChild(nextLi);
+    }
+
+    // Mudar página
+    function changePage(page) {
+        const totalPages = Math.ceil(filteredTipos.length / itemsPerPage);
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        renderTable();
+
+        // Scroll para o topo da tabela
+        document.querySelector('.card-body').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Atualizar informações da página
+    function updatePageInfo() {
+        const startIndex = (currentPage - 1) * itemsPerPage + 1;
+        const endIndex = Math.min(currentPage * itemsPerPage, filteredTipos.length);
+        const total = filteredTipos.length;
+
+        document.getElementById('pageInfo').textContent =
+            `Mostrando ${startIndex} a ${endIndex} de ${total} tipos`;
+    }
+
+    // Submit do formulário
+    document.getElementById('formTipo').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const tipoId = formData.get('tipo_id');
+        const data = {
+            nome: formData.get('nome'),
+            categoria: formData.get('categoria'),
+            descricao: formData.get('descricao'),
+            para_emprestimo: formData.get('para_emprestimo') === 'true'
+        };
+
+        if (!data.nome || !data.categoria) {
+            alert('Por favor, preencha todos os campos obrigatórios!');
+            return;
+        }
+
+        const url = tipoId ? `/api/tipos-devices/${tipoId}` : '/api/tipos-devices';
+        const method = tipoId ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(tipoId ? 'Tipo atualizado com sucesso!' : 'Tipo cadastrado com sucesso!');
+                    closeModal('modalTipo');
+                    loadTiposFromAPI(); // Recarregar a lista
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao salvar tipo. Verifique o console para mais detalhes.');
+            });
+    });
+
+    // Fechar modal usando Bootstrap 5
+    function closeModal(modalId) {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+        }
+    }
+
+    // Abrir modal usando Bootstrap 5
+    function openModal(modalId) {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+    }
+
+    // Editar tipo
+    function editarTipo(tipoId) {
+        fetch(`/api/tipos-devices/${tipoId}`)
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    const tipo = result.data;
+
+                    document.getElementById('tipo_id').value = tipo.id;
+                    document.getElementById('nome_tipo').value = tipo.nome;
+                    document.getElementById('categoria_tipo').value = tipo.categoria || '';
+                    document.getElementById('descricao_tipo').value = tipo.descricao || '';
+                    document.getElementById('para_emprestimo_tipo').value = tipo.para_emprestimo ? 'true' : 'false';
+
+                    document.getElementById('modalTipoTitle').textContent = 'Editar Tipo de Device';
+                    openModal('modalTipo');
+
+                } else {
+                    alert('Erro ao carregar tipo: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao carregar tipo. Verifique o console para mais detalhes.');
+            });
+    }
+
+    // Excluir tipo
+    function excluirTipo(tipoId, tipoNome) {
+        if (confirm(`Tem certeza que deseja excluir o tipo "${tipoNome}"? Esta ação não pode ser desfeita.`)) {
+            fetch(`/api/tipos-devices/${tipoId}`, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        loadTiposFromAPI(); // Recarregar a lista
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao excluir tipo. Verifique o console para mais detalhes.');
+                });
+        }
+    }
+
+    // Download template
+    function downloadTemplate() {
+        window.open('/download/template-tipos-devices', '_blank');
+    }
+
+    // Importar tipos
+    document.getElementById('formImportarTipos').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        fetch('/api/importar/tipos-devices', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    let message = result.message;
+                    if (result.detalhes && result.detalhes.erros && result.detalhes.erros.length > 0) {
+                        message += '\n\nErros encontrados:\n' + result.detalhes.erros.join('\n');
+                    }
+                    alert(message);
+
+                    closeModal('modalImportarTipos');
+
+                    if (result.detalhes && result.detalhes.sucessos > 0) {
+                        loadTiposFromAPI(); // Recarregar a lista
+                    }
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro na importação. Verifique o console para mais detalhes.');
+            });
+    });
+</script>
+
+<style>
+    .page-item.active .page-link {
+        background-color: #000000;
+        border-color: #000000;
+    }
+
+    .page-link {
+        color: #000000;
+    }
+
+    .page-link:hover {
+        color: #000000;
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+
+    .pagination {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}

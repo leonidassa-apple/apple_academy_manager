@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h2 fw-bold">Gerenciamento de Acervo</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoLivro">
+            <i class="fas fa-plus me-2"></i>Novo Livro
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="livrosTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>ISBN</th>
+                        <th>Exemplares</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="livrosTableBody">
+                    <!-- Preenchido via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Livro -->
+<div class="modal fade" id="modalNovoLivro" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Livro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formNovoLivro">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Título *</label>
+                        <input type="text" class="form-control" name="titulo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Autor *</label>
+                        <input type="text" class="form-control" name="autor" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ISBN</label>
+                            <input type="text" class="form-control" name="isbn">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Categoria</label>
+                            <input type="text" class="form-control" name="categoria">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Ano</label>
+                            <input type="number" class="form-control" name="ano">
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Editora</label>
+                            <input type="text" class="form-control" name="editora">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gerenciar Exemplares -->
+<div class="modal fade" id="modalExemplares" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gerenciar Exemplares: <span id="tituloLivroExemplar"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Form Adicionar/Editar Exemplar -->
+                <form id="formNovoExemplar" class="row g-3 mb-4 border-bottom pb-3">
+                    <input type="hidden" id="livroIdExemplar" name="livro_id">
+                    <input type="hidden" id="exemplarId" name="id"> <!-- ID para edição -->
+
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" name="codigo_barras" id="inputCodigoBarras"
+                            placeholder="Cód. Barras *" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" name="localizacao" id="inputLocalizacao"
+                            placeholder="Localização">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" name="observacao" id="inputObservacao"
+                            placeholder="Observação">
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="button" class="btn btn-secondary d-none" id="btnCancelarEdicao"
+                            onclick="cancelarEdicao()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button type="submit" class="btn btn-success w-100" id="btnSalvarExemplar">
+                            <i class="fas fa-plus"></i> <span id="txtBtnSalvar">Adicionar</span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Lista de Exemplares -->
+                <h6>Exemplares Existentes</h6>
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Status</th>
+                            <th>Local</th>
+                            <th>Obs.</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exemplaresTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', loadLivros);
+
+    function loadLivros() {
+        fetch('/api/livros')
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    const tbody = document.getElementById('livrosTableBody');
+                    tbody.innerHTML = '';
+                    res.data.forEach(livro => {
+                        tbody.innerHTML += `
+                        <tr>
+                            <td>${livro.id}</td>
+                            <td>${livro.titulo}</td>
+                            <td>${livro.autor}</td>
+                            <td>${livro.isbn || '-'}</td>
+                            <td>
+                                <span class="badge bg-secondary">${livro.total_exemplares} Total</span>
+                                <span class="badge bg-success">${livro.disponiveis} Disp.</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick='openExemplares(${JSON.stringify(livro)})'>
+                                    <i class="fas fa-barcode"></i> Gerenciar
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    });
+                }
+            });
+    }
+
+    document.getElementById('formNovoLivro').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        fetch('/api/livros', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    alert('Livro cadastrado!');
+                    bootstrap.Modal.getInstance(document.getElementById('modalNovoLivro')).hide();
+                    this.reset();
+                    loadLivros();
+                } else {
+                    alert('Erro: ' + res.message);
+                }
+            });
+    });
+
+    function openExemplares(livro) {
+        document.getElementById('tituloLivroExemplar').textContent = livro.titulo;
+        document.getElementById('livroIdExemplar').value = livro.id;
+        cancelarEdicao(); // Ensure clean state
+        loadExemplares(livro.id);
+        new bootstrap.Modal(document.getElementById('modalExemplares')).show();
+    }
+
+    function loadExemplares(livro_id) {
+        fetch(`/api/exemplares?livro_id=${livro_id}`)
+            .then(r => r.json())
+            .then(res => {
+                const tbody = document.getElementById('exemplaresTableBody');
+                tbody.innerHTML = '';
+                if (res.success) {
+                    res.data.forEach(ex => {
+                        let statusBadge = ex.status === 'Disponível' ? 'bg-success' : 'bg-warning text-dark';
+
+                        // Safe serialization for onclick
+                        const exString = JSON.stringify(ex).replace(/'/g, "&#39;");
+
+                        tbody.innerHTML += `
+                        <tr>
+                            <td><code>${ex.codigo_barras}</code></td>
+                            <td><span class="badge ${statusBadge}">${ex.status}</span></td>
+                            <td>${ex.localizacao || '-'}</td>
+                            <td>${ex.observacao || '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary" onclick='editarExemplar(${exString})'>
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deletarExemplar(${ex.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    });
+                }
+            });
+    }
+
+    // --- Form Handler (Create or Update) ---
+    document.getElementById('formNovoExemplar').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const exemplarId = document.getElementById('exemplarId').value;
+        const isEdit = !!exemplarId;
+
+        const data = {
+            livro_id: document.getElementById('livroIdExemplar').value,
+            codigo_barras: document.getElementById('inputCodigoBarras').value,
+            localizacao: document.getElementById('inputLocalizacao').value,
+            observacao: document.getElementById('inputObservacao').value
+        };
+
+        if (isEdit) {
+            data.id = exemplarId;
+        }
+
+        const method = isEdit ? 'PUT' : 'POST';
+        const url = '/api/exemplares';
+
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(data)
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    cancelarEdicao(); // Resets form and UI
+                    loadExemplares(data.livro_id);
+                    loadLivros(); // Update global counters
+                } else {
+                    alert('Erro: ' + res.message);
+                }
+            });
+    });
+
+    function editarExemplar(ex) {
+        document.getElementById('exemplarId').value = ex.id;
+        document.getElementById('inputCodigoBarras').value = ex.codigo_barras;
+        document.getElementById('inputLocalizacao').value = ex.localizacao || '';
+        document.getElementById('inputObservacao').value = ex.observacao || '';
+
+        // Update UI
+        document.getElementById('btnCancelarEdicao').classList.remove('d-none');
+        document.getElementById('btnSalvarExemplar').classList.remove('btn-success');
+        document.getElementById('btnSalvarExemplar').classList.add('btn-warning');
+        document.getElementById('txtBtnSalvar').textContent = 'Atualizar';
+        document.getElementById('inputCodigoBarras').focus();
+    }
+
+    function cancelarEdicao() {
+        document.getElementById('formNovoExemplar').reset();
+        document.getElementById('exemplarId').value = '';
+
+        // Restore existing Livro ID hidden field (it was cleared by reset)
+        // Actually, reset() passes clears hidden fields? No, usually not, but let's be safe.
+        // Wait, standard form reset DOES affect hidden inputs? No, it reverts to 'default value'.
+        // Since we set the value dynamically via JS, it might be tricky.
+        // It's safer to just re-grab the value from the modal context or rely on the fact we haven't closed the modal.
+        // Actually, simpler: just don't reset the hidden libro_id.
+        // But reset() is convenient for text inputs.
+        // Let's manually clear inputs instead of form.reset() to protect livro_id.
+
+        document.getElementById('inputCodigoBarras').value = '';
+        document.getElementById('inputLocalizacao').value = '';
+        document.getElementById('inputObservacao').value = '';
+        document.getElementById('exemplarId').value = '';
+
+        // Reset UI
+        document.getElementById('btnCancelarEdicao').classList.add('d-none');
+        document.getElementById('btnSalvarExemplar').classList.add('btn-success');
+        document.getElementById('btnSalvarExemplar').classList.remove('btn-warning');
+        document.getElementById('txtBtnSalvar').textContent = 'Adicionar';
+    }
+
+    function deletarExemplar(id) {
+        if (!confirm('Tem certeza que deseja remover este exemplar? Esta ação não pode ser desfeita se houver histórico.')) return;
+
+        fetch(`/api/exemplares?id=${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    const livroId = document.getElementById('livroIdExemplar').value;
+                    loadExemplares(livroId);
+                    loadLivros();
+                } else {
+                    alert('Erro: ' + res.message);
+                }
+            });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,985 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h3 fw-bold">Gerenciamento de Empréstimos</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-apple me-2" data-bs-toggle="modal" data-bs-target="#modalEmprestimo">
+            <i class="fas fa-plus me-2"></i>Novo Empréstimo
+        </button>
+        {% if current_user.role == 'admin' %}
+        <button type="button" class="btn btn-danger" id="btnDeleteSelectedEmprestimos" style="display: none;"
+            onclick="deleteSelectedEmprestimos()">
+            <i class="fas fa-trash me-2"></i>Deletar Selecionados (<span id="selectedEmprestimosCount">0</span>)
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filtros e Busca -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="input-group">
+            <input type="text" class="form-control" id="searchEmprestimo" placeholder="Buscar empréstimo...">
+            <button class="btn btn-apple-outline" type="button" onclick="filterEmprestimos()">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="filterStatus">
+            <option value="">Todos os status</option>
+            <option value="Ativo">Ativos</option>
+            <option value="Finalizado">Finalizados</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="itemsPerPage" onchange="changeItemsPerPage()">
+            <option value="10">10 por página</option>
+            <option value="20">20 por página</option>
+            <option value="50">50 por página</option>
+            <option value="100">100 por página</option>
+        </select>
+    </div>
+</div>
+
+<!-- Tabela de Empréstimos -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        {% if current_user.role == 'admin' %}
+                        <th width="50">
+                            <input type="checkbox" id="selectAllEmprestimos"
+                                onchange="toggleSelectAllEmprestimos(this)">
+                        </th>
+                        {% endif %}
+                        <th>Aluno</th>
+                        <th>Device</th>
+                        <th>Data Retirada</th>
+                        <th>Data Devolução</th>
+                        <th>Status</th>
+                        <th>Assinatura</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="emprestimosTableBody">
+                    {% for emprestimo in emprestimos %}
+                    <tr>
+                        {% if current_user.role == 'admin' %}
+                        <td>
+                            <input type="checkbox" class="emprestimo-checkbox" value="{{ emprestimo.id }}"
+                                onchange="toggleEmprestimoSelection({{ emprestimo.id }})">
+                        </td>
+                        {% endif %}
+                        <td>{{ emprestimo.aluno_nome }}</td>
+                        <td>{{ emprestimo.device_nome }} ({{ emprestimo.device_tipo }})</td>
+                        <td>{{ emprestimo.data_retirada }}</td>
+                        <td>{{ emprestimo.data_devolucao }}</td>
+                        <td>
+                            <span
+                                class="badge {% if emprestimo.status == 'Ativo' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ emprestimo.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary btn-sm btn-ver-assinatura"
+                                    data-assinatura="{{ emprestimo.assinatura or '' }}" data-tipo="Retirada" {% if not
+                                    emprestimo.assinatura %}disabled{% endif %}>
+                                    Assinatura
+                                </button>
+                                <button class="btn btn-apple-outline btn-sm"
+                                    onclick="adicionarAssinatura({{ emprestimo.id }})">
+                                    <i class="fas fa-signature me-1"></i>Assinar
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                {% if emprestimo.status == 'Ativo' %}
+                                <button class="btn btn-outline-success"
+                                    onclick="devolverEmprestimo({{ emprestimo.id }})">
+                                    <i class="fas fa-check me-1"></i>Devolver
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-outline-danger btn-excluir-emprestimo"
+                                    data-emprestimo-id="{{ emprestimo.id }}"
+                                    data-aluno-nome="{{ emprestimo.aluno_nome or '' }}">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Empréstimo -->
+<div class="modal fade" id="modalEmprestimo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Empréstimo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formEmprestimo">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Aluno *</label>
+                            <select class="form-select" name="aluno_id" id="selectAluno" required>
+                                <option value="">Selecione o aluno...</option>
+                                {% for aluno in alunos %}
+                                <option value="{{ aluno.id }}">{{ aluno.nome }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if not alunos %}
+                            <div class="text-danger small mt-1">
+                                Nenhum aluno cadastrado. <a href="{{ url_for('alunos') }}">Cadastre um aluno
+                                    primeiro</a>.
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Device *</label>
+                            <select class="form-select" name="device_id" id="selectDevice" required>
+                                <option value="">Selecione o device...</option>
+                                {% for device in devices %}
+                                <option value="{{ device.id }}">{{ device.nome }} ({{ device.tipo }})</option>
+                                {% endfor %}
+                            </select>
+                            {% if not devices %}
+                            <div class="text-danger small mt-1">
+                                Nenhum device disponível. <a href="{{ url_for('devices') }}">Cadastre um device
+                                    primeiro</a>.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Data de Retirada *</label>
+                            <input type="datetime-local" class="form-control" name="data_retirada" id="dataRetirada"
+                                required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Data de Devolução *</label>
+                            <input type="datetime-local" class="form-control" name="data_devolucao" id="dataDevolucao"
+                                required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Acessórios</label>
+                            <textarea class="form-control" name="acessorios" rows="3"
+                                placeholder="Liste os acessórios incluídos (carregador, cabo, case, etc.)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Área de Assinatura Digital -->
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Assinatura do Aluno (Retirada) *</label>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="signature-container">
+                                        <canvas id="signaturePad" width="600" height="200"></canvas>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            onclick="clearSignature()">
+                                            <i class="fas fa-eraser me-1"></i>Limpar Assinatura
+                                        </button>
+                                        <small class="text-muted ms-2">Assine na área acima usando mouse ou
+                                            toque</small>
+                                    </div>
+                                    <input type="hidden" name="assinatura" id="assinaturaInput">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">* Campos obrigatórios</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple" {% if not alunos or not devices %}disabled{% endif %}>
+                        <i class="fas fa-save me-2"></i>Registrar Empréstimo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Assinatura -->
+<div class="modal fade" id="modalAssinatura" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAssinaturaTitle">Assinatura</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="assinaturaImage" src="" alt="Assinatura" class="img-fluid" style="max-height: 300px;">
+                <p class="mt-3 text-muted" id="assinaturaInfo"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Assinatura -->
+<div class="modal fade" id="modalAdicionarAssinatura" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Assinatura</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="formAssinatura">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="emprestimo_id" id="emprestimoAssinaturaId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Assinatura</label>
+                        <select class="form-select" name="tipo_assinatura" id="tipoAssinatura" required>
+                            <option value="retirada">Retirada do Equipamento</option>
+                            <option value="devolucao">Devolução do Equipamento</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assinatura *</label>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="signature-container">
+                                    <canvas id="signaturePadAdicional" width="500" height="150"></canvas>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                                        onclick="clearSignatureAdicional()">
+                                        <i class="fas fa-eraser me-1"></i>Limpar Assinatura
+                                    </button>
+                                    <small class="text-muted ms-2">Assine na área acima usando mouse ou toque</small>
+                                </div>
+                                <input type="hidden" name="assinatura" id="assinaturaInputAdicional">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-apple">Salvar Assinatura</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+<script>
+    // Variáveis para as assinaturas
+    let signaturePad;
+    let signaturePadAdicional;
+
+    // Variáveis para seleção múltipla de empréstimos
+    let selectedEmprestimoIds = new Set();
+    const canBulkDeleteEmprestimos = {{ 'true' if current_user.role == 'admin' else 'false' }};
+
+    // Inicializar quando o DOM estiver carregado
+    document.addEventListener('DOMContentLoaded', function () {
+        initializeSignaturePads();
+        setDefaultDates();
+        setupFormListeners();
+        setupEmprestimoButtons();
+    });
+
+    // Configurar botões de empréstimo usando event delegation
+    function setupEmprestimoButtons() {
+        // Botões de ver assinatura
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.btn-ver-assinatura')) {
+                const btn = e.target.closest('.btn-ver-assinatura');
+                if (btn && !btn.disabled) {
+                    const assinatura = btn.getAttribute('data-assinatura') || '';
+                    const tipo = btn.getAttribute('data-tipo') || 'Retirada';
+                    verAssinatura(assinatura, tipo);
+                }
+            }
+        });
+
+        // Botões de excluir empréstimo
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.btn-excluir-emprestimo')) {
+                const btn = e.target.closest('.btn-excluir-emprestimo');
+                if (btn) {
+                    const emprestimoIdStr = btn.getAttribute('data-emprestimo-id');
+                    const emprestimoId = emprestimoIdStr ? parseInt(emprestimoIdStr) : null;
+                    const alunoNome = btn.getAttribute('data-aluno-nome') || 'Desconhecido';
+
+                    if (emprestimoId && !isNaN(emprestimoId)) {
+                        excluirEmprestimo(emprestimoId, alunoNome);
+                    } else {
+                        console.error('ID de empréstimo inválido:', emprestimoIdStr);
+                        alert('Erro: ID de empréstimo inválido.');
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeSignaturePads() {
+        // Inicializar o primeiro signature pad (novo empréstimo)
+        const canvas = document.getElementById('signaturePad');
+        if (canvas) {
+            // CORREÇÃO: Configurar o canvas corretamente
+            const rect = canvas.getBoundingClientRect();
+
+            // Definir tamanho físico do canvas
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+            // Configurar contexto 2D
+            const ctx = canvas.getContext('2d');
+            ctx.scale(1, 1);
+
+            signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)',
+                minWidth: 1,
+                maxWidth: 3,
+                throttle: 16
+            });
+
+            // CORREÇÃO: Evento para atualizar o campo hidden
+            signaturePad.addEventListener('endStroke', () => {
+                updateSignatureInput();
+            });
+
+            console.log('Signature Pad inicializado:', canvas.width, 'x', canvas.height);
+        }
+
+        // Inicializar o segundo signature pad (assinatura adicional)
+        const canvasAdicional = document.getElementById('signaturePadAdicional');
+        if (canvasAdicional) {
+            // CORREÇÃO: Configurar o canvas corretamente
+            const rect = canvasAdicional.getBoundingClientRect();
+
+            // Definir tamanho físico do canvas
+            canvasAdicional.width = rect.width;
+            canvasAdicional.height = rect.height;
+
+            // Configurar contexto 2D
+            const ctx = canvasAdicional.getContext('2d');
+            ctx.scale(1, 1);
+
+            signaturePadAdicional = new SignaturePad(canvasAdicional, {
+                backgroundColor: 'rgb(255, 255, 255)',
+                penColor: 'rgb(0, 0, 0)',
+                minWidth: 1,
+                maxWidth: 3,
+                throttle: 16
+            });
+
+            // CORREÇÃO: Evento para atualizar o campo hidden
+            signaturePadAdicional.addEventListener('endStroke', () => {
+                updateSignatureInputAdicional();
+            });
+
+            console.log('Signature Pad Adicional inicializado:', canvasAdicional.width, 'x', canvasAdicional.height);
+        }
+    }
+
+    // CORREÇÃO: Funções separadas para atualizar os campos hidden
+    function updateSignatureInput() {
+        if (signaturePad && !signaturePad.isEmpty()) {
+            try {
+                // CORREÇÃO: Usar formato PNG explicitamente
+                const signatureData = signaturePad.toDataURL('image/png');
+                document.getElementById('assinaturaInput').value = signatureData;
+                console.log('Assinatura principal atualizada - Tamanho:', signatureData.length);
+            } catch (error) {
+                console.error('Erro ao gerar assinatura principal:', error);
+            }
+        }
+    }
+
+    function updateSignatureInputAdicional() {
+        if (signaturePadAdicional && !signaturePadAdicional.isEmpty()) {
+            try {
+                // CORREÇÃO: Usar formato PNG explicitamente
+                const signatureData = signaturePadAdicional.toDataURL('image/png');
+                document.getElementById('assinaturaInputAdicional').value = signatureData;
+                console.log('Assinatura adicional atualizada - Tamanho:', signatureData.length);
+            } catch (error) {
+                console.error('Erro ao gerar assinatura adicional:', error);
+            }
+        }
+    }
+
+    function setupFormListeners() {
+        // Formulário de empréstimo
+        document.getElementById('formEmprestimo').addEventListener('submit', function (e) {
+            e.preventDefault();
+            criarEmprestimo();
+        });
+
+        // Formulário de assinatura
+        document.getElementById('formAssinatura').addEventListener('submit', function (e) {
+            e.preventDefault();
+            adicionarAssinaturaSubmit();
+        });
+    }
+
+    function setDefaultDates() {
+        // Definir data/hora atual para retirada
+        const now = new Date();
+        const timezoneOffset = now.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(now - timezoneOffset).toISOString().slice(0, 16);
+
+        const dataRetirada = document.getElementById('dataRetirada');
+        if (dataRetirada) {
+            dataRetirada.value = localISOTime;
+        }
+
+        // Definir data/hora para daqui a 7 dias para devolução
+        const oneWeekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const localISOTimeWeekLater = new Date(oneWeekLater - timezoneOffset).toISOString().slice(0, 16);
+
+        const dataDevolucao = document.getElementById('dataDevolucao');
+        if (dataDevolucao) {
+            dataDevolucao.value = localISOTimeWeekLater;
+        }
+    }
+
+    // Limpar assinatura
+    function clearSignature() {
+        if (signaturePad) {
+            signaturePad.clear();
+            document.getElementById('assinaturaInput').value = '';
+            console.log('Assinatura principal limpa');
+        }
+    }
+
+    function clearSignatureAdicional() {
+        if (signaturePadAdicional) {
+            signaturePadAdicional.clear();
+            document.getElementById('assinaturaInputAdicional').value = '';
+            console.log('Assinatura adicional limpa');
+        }
+    }
+
+    // Criar empréstimo - VERSÃO SIMPLIFICADA E CORRIGIDA
+    function criarEmprestimo() {
+        console.log('=== INICIANDO CRIAÇÃO DE EMPRÉSTIMO ===');
+
+        // CORREÇÃO: Verificar assinatura de forma mais robusta
+        const assinaturaInput = document.getElementById('assinaturaInput');
+        let assinaturaFinal = assinaturaInput.value;
+
+        // Se o campo hidden estiver vazio, tentar gerar a assinatura do canvas
+        if (!assinaturaFinal && signaturePad && !signaturePad.isEmpty()) {
+            try {
+                assinaturaFinal = signaturePad.toDataURL('image/png');
+                assinaturaInput.value = assinaturaFinal;
+                console.log('Assinatura gerada do canvas:', assinaturaFinal ? 'SIM' : 'NÃO');
+            } catch (error) {
+                console.error('Erro ao gerar assinatura do canvas:', error);
+            }
+        }
+
+        console.log('Assinatura disponível:', assinaturaFinal ? 'SIM' : 'NÃO');
+
+        if (!assinaturaFinal) {
+            alert('Por favor, forneça a assinatura do aluno para a retirada do equipamento.');
+            return;
+        }
+
+        // Verificar se a assinatura é um Data URL válido
+        if (!assinaturaFinal.startsWith('data:image/')) {
+            console.error('Assinatura inválida:', assinaturaFinal.substring(0, 100));
+            alert('Erro: A assinatura não está em um formato válido. Por favor, assine novamente.');
+            return;
+        }
+
+        const formData = new FormData(document.getElementById('formEmprestimo'));
+
+        const data = {
+            aluno_id: formData.get('aluno_id'),
+            device_id: formData.get('device_id'),
+            data_retirada: formData.get('data_retirada'),
+            data_devolucao: formData.get('data_devolucao'),
+            acessorios: formData.get('acessorios'),
+            assinatura: assinaturaFinal
+        };
+
+        console.log('Dados do formulário:', {
+            aluno_id: data.aluno_id,
+            device_id: data.device_id,
+            data_retirada: data.data_retirada,
+            data_devolucao: data.data_devolucao,
+            assinatura_tamanho: data.assinatura ? data.assinatura.length : 0
+        });
+
+        // Validações básicas
+        if (!data.aluno_id || !data.device_id || !data.data_retirada || !data.data_devolucao) {
+            alert('Por favor, preencha todos os campos obrigatórios!');
+            return;
+        }
+
+        console.log('Enviando requisição para /api/emprestimos...');
+
+        fetch('/api/emprestimos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => {
+                console.log('Status da resposta:', response.status);
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(result => {
+                console.log('Resposta do servidor:', result);
+                if (result.success) {
+                    alert('Empréstimo registrado com sucesso!');
+                    // Fechar o modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEmprestimo'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    // Recarregar a página após um breve delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+                alert('Erro ao registrar empréstimo: ' + error.message);
+            });
+    }
+
+    // Ver assinatura - CORREÇÃO PARA IMAGEM QUEBRADA
+    function verAssinatura(assinaturaData, tipo) {
+        // Verificar se a assinatura está vazia ou inválida
+        if (!assinaturaData ||
+            assinaturaData === 'None' ||
+            assinaturaData === '' ||
+            assinaturaData === null ||
+            assinaturaData === 'null' ||
+            assinaturaData === 'undefined') {
+            alert(`Nenhuma assinatura de ${tipo.toLowerCase()} encontrada.`);
+            return;
+        }
+
+        // CORREÇÃO: Verificar se é um Data URL válido
+        if (typeof assinaturaData !== 'string' || !assinaturaData.startsWith('data:image/')) {
+            console.error('Assinatura inválida para visualização:', assinaturaData ? assinaturaData.substring(0, 100) : 'null');
+            alert('A assinatura armazenada está em um formato inválido.');
+            return;
+        }
+
+        const img = document.getElementById('assinaturaImage');
+        img.onload = function () {
+            console.log('Imagem da assinatura carregada com sucesso');
+        };
+        img.onerror = function () {
+            console.error('Erro ao carregar imagem da assinatura');
+            alert('Erro ao exibir a assinatura. O formato pode estar corrompido.');
+        };
+
+        img.src = assinaturaData;
+        document.getElementById('modalAssinaturaTitle').textContent = `Assinatura - ${tipo}`;
+        document.getElementById('assinaturaInfo').textContent = `Assinatura registrada para ${tipo.toLowerCase()} do equipamento.`;
+
+        const modal = new bootstrap.Modal(document.getElementById('modalAssinatura'));
+        modal.show();
+    }
+
+    // Adicionar assinatura - abrir modal
+    function adicionarAssinatura(emprestimoId) {
+        document.getElementById('emprestimoAssinaturaId').value = emprestimoId;
+        // Limpar a assinatura anterior
+        if (signaturePadAdicional) {
+            signaturePadAdicional.clear();
+            document.getElementById('assinaturaInputAdicional').value = '';
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('modalAdicionarAssinatura'));
+        modal.show();
+    }
+
+    // Adicionar assinatura - enviar
+    function adicionarAssinaturaSubmit() {
+        console.log('=== INICIANDO ADIÇÃO DE ASSINATURA ===');
+
+        const assinaturaInput = document.getElementById('assinaturaInputAdicional');
+        let assinaturaFinal = assinaturaInput.value;
+
+        // Se o campo hidden estiver vazio, tentar gerar a assinatura do canvas
+        if (!assinaturaFinal && signaturePadAdicional && !signaturePadAdicional.isEmpty()) {
+            try {
+                assinaturaFinal = signaturePadAdicional.toDataURL('image/png');
+                assinaturaInput.value = assinaturaFinal;
+                console.log('Assinatura adicional gerada do canvas:', assinaturaFinal ? 'SIM' : 'NÃO');
+            } catch (error) {
+                console.error('Erro ao gerar assinatura adicional do canvas:', error);
+            }
+        }
+
+        if (!assinaturaFinal) {
+            alert('Por favor, forneça a assinatura.');
+            return;
+        }
+
+        // Verificar se a assinatura é um Data URL válido
+        if (!assinaturaFinal.startsWith('data:image/')) {
+            console.error('Assinatura adicional inválida:', assinaturaFinal.substring(0, 100));
+            alert('Erro: A assinatura não está em um formato válido. Por favor, assine novamente.');
+            return;
+        }
+
+        const formData = new FormData(document.getElementById('formAssinatura'));
+
+        const data = {
+            emprestimo_id: formData.get('emprestimo_id'),
+            tipo_assinatura: formData.get('tipo_assinatura'),
+            assinatura: assinaturaFinal
+        };
+
+        console.log('Dados da assinatura adicional:', data);
+
+        fetch('/api/emprestimos/assinatura', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => {
+                console.log('Status da resposta (assinatura):', response.status);
+                return response.json();
+            })
+            .then(result => {
+                console.log('Resposta do servidor (assinatura):', result);
+                if (result.success) {
+                    alert('Assinatura adicionada com sucesso!');
+                    // Fechar o modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalAdicionarAssinatura'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    // Recarregar a página após um breve delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição (assinatura):', error);
+                alert('Erro ao adicionar assinatura: ' + error.message);
+            });
+    }
+
+    // Devolver empréstimo
+    function devolverEmprestimo(emprestimoId) {
+        if (confirm('Tem certeza que deseja registrar a devolução deste empréstimo?')) {
+            fetch(`/api/emprestimos/${emprestimoId}/devolver`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                }
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao registrar devolução.');
+                });
+        }
+    }
+
+    // Excluir empréstimo - CORRIGIDA
+    function excluirEmprestimo(emprestimoId, alunoNome) {
+        if (confirm(`Tem certeza que deseja excluir o empréstimo do aluno "${alunoNome}"? Esta ação não pode ser desfeita.`)) {
+            fetch(`/api/emprestimos/${emprestimoId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                }
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert(result.message);
+                        location.reload();
+                    } else {
+                        alert('Erro: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Erro ao excluir empréstimo: ' + error.message);
+                });
+        }
+    }
+
+    // =============================================================================
+    // FUNÇÕES DE SELEÇÃO MÚLTIPLA DE EMPRÉSTIMOS
+    // =============================================================================
+
+    // Alternar seleção de um empréstimo
+    function toggleEmprestimoSelection(emprestimoId) {
+        if (!canBulkDeleteEmprestimos) return;
+
+        if (selectedEmprestimoIds.has(emprestimoId)) {
+            selectedEmprestimoIds.delete(emprestimoId);
+        } else {
+            selectedEmprestimoIds.add(emprestimoId);
+        }
+        updateDeleteButtonEmprestimos();
+        updateSelectAllEmprestimosCheckbox();
+    }
+
+    // Selecionar ou desselecionar todos os empréstimos
+    function toggleSelectAllEmprestimos(checkbox) {
+        if (!canBulkDeleteEmprestimos) return;
+
+        const checkboxes = document.getElementsByClassName('emprestimo-checkbox');
+
+        if (checkbox.checked) {
+            Array.from(checkboxes).forEach(cb => {
+                const emprestimoId = parseInt(cb.value);
+                selectedEmprestimoIds.add(emprestimoId);
+                cb.checked = true;
+            });
+        } else {
+            Array.from(checkboxes).forEach(cb => {
+                const emprestimoId = parseInt(cb.value);
+                selectedEmprestimoIds.delete(emprestimoId);
+                cb.checked = false;
+            });
+        }
+
+        updateDeleteButtonEmprestimos();
+    }
+
+    // Atualizar o estado do checkbox "Selecionar Todos"
+    function updateSelectAllEmprestimosCheckbox() {
+        const selectAllCheckbox = document.getElementById('selectAllEmprestimos');
+        if (!selectAllCheckbox) return;
+
+        const checkboxes = document.getElementsByClassName('emprestimo-checkbox');
+        if (checkboxes.length === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            return;
+        }
+
+        const selectedCount = Array.from(checkboxes).filter(cb =>
+            selectedEmprestimoIds.has(parseInt(cb.value))
+        ).length;
+
+        if (selectedCount === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        } else if (selectedCount === checkboxes.length) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+        }
+    }
+
+    // Atualizar visibilidade do botão de deletar selecionados
+    function updateDeleteButtonEmprestimos() {
+        const btnDeleteSelected = document.getElementById('btnDeleteSelectedEmprestimos');
+        const selectedCount = document.getElementById('selectedEmprestimosCount');
+
+        if (!btnDeleteSelected || !selectedCount) return;
+
+        if (selectedEmprestimoIds.size > 0) {
+            btnDeleteSelected.style.display = 'block';
+            selectedCount.textContent = selectedEmprestimoIds.size;
+        } else {
+            btnDeleteSelected.style.display = 'none';
+        }
+    }
+
+    // Deletar empréstimos selecionados
+    function deleteSelectedEmprestimos() {
+        if (!canBulkDeleteEmprestimos) return;
+
+        if (selectedEmprestimoIds.size === 0) {
+            alert('Nenhum empréstimo selecionado!');
+            return;
+        }
+
+        const emprestimoCount = selectedEmprestimoIds.size;
+        if (!confirm(`Tem certeza que deseja excluir ${emprestimoCount} empréstimo(s) selecionado(s)? Esta ação não pode ser desfeita.`)) {
+            return;
+        }
+
+        const emprestimoIds = Array.from(selectedEmprestimoIds);
+
+        fetch('/api/emprestimos/delete-multiple', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ids: emprestimoIds })
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    selectedEmprestimoIds.clear();
+                    location.reload();
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao excluir empréstimos. Verifique o console para mais detalhes.');
+            });
+    }
+
+    // Limpar formulários quando modais são fechados
+    document.addEventListener('DOMContentLoaded', function () {
+        // Modal de empréstimo
+        const modalEmprestimo = document.getElementById('modalEmprestimo');
+        if (modalEmprestimo) {
+            modalEmprestimo.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('formEmprestimo').reset();
+                if (signaturePad) {
+                    signaturePad.clear();
+                    document.getElementById('assinaturaInput').value = '';
+                }
+                setDefaultDates();
+                console.log('Modal de empréstimo fechado e limpo');
+            });
+        }
+
+        // Modal de assinatura adicional
+        const modalAssinaturaAdicional = document.getElementById('modalAdicionarAssinatura');
+        if (modalAssinaturaAdicional) {
+            modalAssinaturaAdicional.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('formAssinatura').reset();
+                if (signaturePadAdicional) {
+                    signaturePadAdicional.clear();
+                    document.getElementById('assinaturaInputAdicional').value = '';
+                }
+                console.log('Modal de assinatura adicional fechado e limpo');
+            });
+        }
+    });
+
+    // CORREÇÃO: Re-inicializar os signature pads quando os modais são abertos
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEmprestimo = document.getElementById('modalEmprestimo');
+        if (modalEmprestimo) {
+            modalEmprestimo.addEventListener('shown.bs.modal', function () {
+                setTimeout(() => {
+                    if (signaturePad) {
+                        const canvas = document.getElementById('signaturePad');
+                        const rect = canvas.getBoundingClientRect();
+                        canvas.width = rect.width;
+                        canvas.height = rect.height;
+                        signaturePad.clear();
+                        console.log('Canvas principal redimensionado:', canvas.width, 'x', canvas.height);
+                    }
+                }, 100);
+            });
+        }
+
+        const modalAssinaturaAdicional = document.getElementById('modalAdicionarAssinatura');
+        if (modalAssinaturaAdicional) {
+            modalAssinaturaAdicional.addEventListener('shown.bs.modal', function () {
+                setTimeout(() => {
+                    if (signaturePadAdicional) {
+                        const canvas = document.getElementById('signaturePadAdicional');
+                        const rect = canvas.getBoundingClientRect();
+                        canvas.width = rect.width;
+                        canvas.height = rect.height;
+                        signaturePadAdicional.clear();
+                        console.log('Canvas adicional redimensionado:', canvas.width, 'x', canvas.height);
+                    }
+                }, 100);
+            });
+        }
+    });
+</script>
+
+<style>
+    .signature-container {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+
+    .signature-container canvas {
+        width: 100%;
+        height: 200px;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        cursor: crosshair;
+        background-color: white;
+        touch-action: none;
+    }
+
+    .emprestimo-checkbox {
+        cursor: pointer;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.075);
+    }
+
+    @media (max-width: 768px) {
+        .signature-container canvas {
+            height: 150px;
+        }
+
+        .btn-group-sm {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .btn-group-sm .btn {
+            margin-bottom: 2px;
+        }
+    }
+</style>
+{% endblock %}

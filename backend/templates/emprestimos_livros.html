@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Alerta de Atrasos (Para o Professor Responsável) -->
+{% set atrasados_meus = 0 %}
+{% for emp in emprestimos %}
+{% if emp.status == 'Atrasado' and emp.criado_por == current_user.id %}
+{% set atrasados_meus = atrasados_meus + 1 %}
+{% endif %}
+{% endfor %}
+
+{% if atrasados_meus > 0 %}
+<div class="alert alert-danger d-flex align-items-center justify-content-between mb-4" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-exclamation-triangle me-2 fs-4"></i>
+        <div>
+            <strong>Atenção!</strong> Você tem <strong>{{ atrasados_meus }}</strong> empréstimo(s) atrasado(s) sob sua
+            responsabilidade.
+        </div>
+    </div>
+    <button class="btn btn-sm btn-outline-danger" onclick="enviarRelatorio()">
+        <i class="fas fa-envelope me-1"></i> Enviar Relatório por E-mail
+    </button>
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-4 mb-4 border-bottom">
+    <h1 class="h2 fw-bold">Circulação de Livros</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalEmprestimo">
+            <i class="fas fa-plus me-2"></i>Novo Empréstimo
+        </button>
+    </div>
+</div>
+
+<!-- Lista de Empréstimos Ativos -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Empréstimos Ativos / Atrasados</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Livro</th>
+                        <th>Cód. Barras</th>
+                        <th>Data Retirada</th>
+                        <th>Devolução Prevista</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in emprestimos %}
+                    <tr>
+                        <td>{{ emp.aluno_nome }}</td>
+                        <td>{{ emp.titulo }} <small class="text-muted">({{ emp.autor }})</small></td>
+                        <td><code>{{ emp.codigo_barras }}</code></td>
+                        <td>{{ emp.data_retirada.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ emp.data_previsao_devolucao.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if emp.status == 'Atrasado' %}
+                            <span class="badge bg-danger">Atrasado</span>
+                            {% else %}
+                            <span class="badge bg-success">Ativo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-success" onclick="devolver({{ emp.id }})">
+                                <i class="fas fa-undo"></i> Devolver
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">Nenhum empréstimo ativo.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Empréstimo -->
+<div class="modal fade" id="modalEmprestimo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Empréstimo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEmprestimo">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label d-block">Filtrar Alunos:</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filtroTipo" id="filtroTodos"
+                                value="todos" checked onchange="filtrarAlunos()">
+                            <label class="form-check-label" for="filtroTodos">Todos</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filtroTipo" id="filtroRegular"
+                                value="Regular" onchange="filtrarAlunos()">
+                            <label class="form-check-label" for="filtroRegular">Regular</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="filtroTipo" id="filtroFoundation"
+                                value="Foundation" onchange="filtrarAlunos()">
+                            <label class="form-check-label" for="filtroFoundation">Foundation</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Aluno *</label>
+                        <select class="form-select" name="aluno_id" id="selectAluno" required>
+                            <option value="">Selecione...</option>
+                            {% for aluno in alunos %}
+                            <option value="{{ aluno.id }}" data-tipo="{{ aluno.tipo_aluno }}">{{ aluno.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Código de Barras do Exemplar *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="codigo_barras" id="codigoBarrasInput"
+                                placeholder="Escaneie ou digite..." required autofocus>
+                            <button class="btn btn-outline-primary" type="button" id="btnScan" onclick="toggleCamera()">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                        <div id="reader" style="width: 100%; display: none; margin-top: 10px;"></div>
+                        <div id="debugLog" class="alert alert-warning mt-2 small"
+                            style="display:none; word-break: break-all;"></div>
+                        <button id="btnCloseCamera" type="button" class="btn btn-sm btn-danger mt-2"
+                            style="display: none;" onclick="stopCamera()">Parar Câmera</button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Data de Retirada</label>
+                        <input type="date" class="form-control" name="data_retirada" id="dataRetirada" required>
+                        <div class="form-text">Data de início do empréstimo.</div>
+                    </div>
+
+                    <div class="alert alert-info small">
+                        <i class="fas fa-info-circle"></i> O prazo padrão é de 14 dias a partir da data selecionada.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar Empréstimo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set default date to today
+    document.getElementById('dataRetirada').valueAsDate = new Date();
+
+    let html5QrCode;
+    let isCameraRunning = false;
+
+    function logDebug(msg) {
+        const d = document.getElementById('debugLog');
+        d.style.display = 'block';
+        d.innerHTML += msg + '<br>';
+        console.log(msg);
+    }
+
+    function toggleCamera() {
+        if (isCameraRunning) {
+            stopCamera();
+        } else {
+            startCamera();
+        }
+    }
+
+    function startCamera() {
+        // Clear logs
+        document.getElementById('debugLog').innerHTML = '';
+
+        if (typeof Html5Qrcode === 'undefined') {
+            logDebug("ERRO: Biblioteca Html5Qrcode não carregada. Verifique internet/blocklist.");
+            return;
+        }
+
+        const readerDiv = document.getElementById('reader');
+        const btnClose = document.getElementById('btnCloseCamera');
+        readerDiv.style.display = 'block';
+        btnClose.style.display = 'block';
+
+        try {
+            // Use verbose to see supported formats in console
+            html5QrCode = new Html5Qrcode("reader", true);
+
+            const config = {
+                fps: 20, // Try even higher FPS
+                qrbox: { width: 300, height: 250 }, // Larger box
+                disableFlip: false // Ensure mirroring isn't issue
+            };
+
+            // Start with blank config to scan ALL formats (debug mode)
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                .then(() => {
+                    isCameraRunning = true;
+                    logDebug("Câmera iniciada com sucesso.");
+                })
+                .catch(err => {
+                    logDebug("ERRO ao iniciar: " + err);
+                    // Check HTTPS
+                    if (location.protocol !== 'https:') {
+                        logDebug("⚠️ Importante: Câmera requer HTTPS. Use https://...");
+                    }
+                });
+        } catch (e) {
+            logDebug("ERRO CRÍTICO: " + e);
+        }
+    }
+
+    function stopCamera() {
+        if (html5QrCode && isCameraRunning) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('reader').style.display = 'none';
+                document.getElementById('btnCloseCamera').style.display = 'none';
+                html5QrCode.clear();
+                isCameraRunning = false;
+                logDebug("Câmera parada.");
+            }).catch(err => {
+                logDebug("Falha ao parar: " + err);
+            });
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        logDebug("Scan sucesso: " + decodedText);
+        document.getElementById('codigoBarrasInput').value = decodedText;
+        stopCamera();
+    }
+
+    // Stop camera when modal is closed
+    document.getElementById('modalEmprestimo').addEventListener('hidden.bs.modal', function () {
+        if (isCameraRunning) stopCamera();
+    });
+
+    function enviarRelatorio() {
+        if (!confirm('Deseja enviar um relatório dos atrasos para o seu e-mail cadastrado?')) return;
+
+        fetch('/api/enviar-alerta-atraso', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+            .then(r => r.json())
+            .then(res => {
+                alert(res.message);
+            })
+            .catch(err => alert('Erro na requisição.'));
+    }
+
+    function filtrarAlunos() {
+        const filtro = document.querySelector('input[name="filtroTipo"]:checked').value;
+        const select = document.getElementById('selectAluno');
+        const options = select.querySelectorAll('option');
+
+        // Reset select value
+        select.value = "";
+
+        options.forEach(opt => {
+            if (opt.value === "") return; // Skip placeholder
+
+            const tipoAluno = (opt.getAttribute('data-tipo') || '').trim();
+            const filtroValor = filtro.trim();
+
+            if (filtroValor === 'todos' || tipoAluno === filtroValor) {
+                opt.hidden = false;
+                opt.disabled = false;
+                opt.style.display = ''; // Fallback
+            } else {
+                opt.hidden = true;
+                opt.disabled = true;
+                opt.style.display = 'none'; // Fallback
+            }
+        });
+    }
+
+    document.getElementById('formEmprestimo').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const data = {
+            aluno_id: this.aluno_id.value,
+            codigo_barras: this.codigo_barras.value,
+            data_retirada: this.data_retirada.value // Send custom date
+        };
+
+        fetch('/api/emprestimos-livros', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(data)
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    alert('Empréstimo realizado!');
+                    location.reload();
+                } else {
+                    alert('Erro: ' + res.message);
+                }
+            });
+    });
+
+    function devolver(id) {
+        if (!confirm('Confirmar devolução este livro?')) return;
+
+        fetch('/api/devolucao-livros', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ emprestimo_id: id })
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert('Erro: ' + res.message);
+                }
+            });
+    }
+</script>
+{% endblock %}

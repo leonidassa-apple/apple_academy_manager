@@ -1,0 +1,3 @@
+tipo_device,numero_serie,modelo,cor,status,para_emprestimo,responsavel,local,convenio,observacao,processador,memoria,armazenamento,tela
+MacBook Air,IMPORT-SN-001,MacBook Air M1,Cinza Espacial,Disponível,Sim,João Silva,Sala 101,Apple,Importado via teste,M1,8GB,256GB,13.3
+iPhone 13,IMPORT-SN-002,iPhone 13 128GB,Estelar,Disponível,Sim,Maria Souza,Laboratório,Apple,Importado via teste,A15,4GB,128GB,6.1

@@ -1,0 +1,32 @@
+FROM python:3.11-slim
+
+# ---- Configurações básicas ----
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# ---- Diretório de trabalho ----
+WORKDIR /app
+
+# ---- Copiar apenas o que é necessário para instalar dependências ----
+COPY backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ---- Copiar código fonte ----
+COPY backend/ ./backend/
+# uploads directory will be created at runtime
+
+# ---- Criar diretório de uploads caso não exista ----
+RUN mkdir -p /app/uploads
+
+# ---- Variáveis de ambiente (pode ser sobrescrita via docker‑compose) ----
+ENV FLASK_APP=backend/app.py
+ENV FLASK_RUN_HOST=0.0.0.0
+ENV FLASK_RUN_PORT=5001
+ENV UPLOAD_FOLDER=/app/uploads
+ENV DB_TYPE=postgres
+
+# ---- Expor porta da API ----
+EXPOSE 5001
+
+# ---- Comando de inicialização ----
+CMD ["python", "backend/app.py"]

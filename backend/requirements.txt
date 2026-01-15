@@ -1,0 +1,21 @@
+Flask==2.3.3
+Flask-Login==0.6.3
+Werkzeug==2.3.7
+numpy
+pandas
+openpyxl==3.1.2
+gunicorn==21.2.0
+mysql-connector-python==9.5.0
+python-dotenv==1.2.1
+
+# Dependências opcionais para integração com Google Calendar (configure apenas se necessário)
+# google-auth==2.25.2
+# google-auth-oauthlib==1.2.0
+# google-auth-httplib2==0.2.0
+# google-api-python-client==2.111.0
+xlrd==2.0.2
+Flask-WTF==1.2.1
+Flask-Limiter==3.5.0
+Flask-Mail
+psycopg2-binary
+Flask-Cors

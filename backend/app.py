@@ -18,14 +18,30 @@ import io
 import json
 import re
 
+import logging
+from logging.handlers import RotatingFileHandler
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24) # Sessão dura 24h
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hora
-# Ajuste de Cookies para Localhost (HTTP <-> HTTPS Proxy)
+# Ajuste de Cookies para Segurança
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False # Importante para localhost sem HTTPS real no browser
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production' # True apenas em produção
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+# Configuração de Logging para Segurança
+if not app.debug:
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+    file_handler = RotatingFileHandler('logs/security.log', maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Apple Academy Manager Startup')
 
 # Configuração de Email
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -47,17 +63,49 @@ csrf = CSRFProtect(app)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["500 per day", "100 per hour"],
     storage_uri="memory://"
 )
 
-# Desabilitar cache para evitar problemas com atualizações
+from werkzeug.exceptions import HTTPException
+
+# Desabilitar cache e injetar headers de segurança
 @app.after_request
-def add_header(response):
+def add_security_headers(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '-1'
+    # Security Headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
     return response
+
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+
+# Manipulador global de erros para evitar vazamento de informações (Internal Server Error)
+@app.after_request
+def set_csrf_cookie(response):
+    # Envia o token CSRF em um cookie para que o Frontend (React) possa ler e enviar de volta nos headers
+    csrf_token = generate_csrf()
+    response.set_cookie('csrf_token', csrf_token, samesite='Lax', secure=app.config['SESSION_COOKIE_SECURE'])
+    return response
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Mantém o comportamento original para erros HTTP (404, 403, etc)
+    if isinstance(e, HTTPException):
+        return e
+    
+    # Log do erro real no servidor para depuração
+    app.logger.error(f"Erro Crítico: {str(e)}", exc_info=True)
+    
+    # Retorna mensagem genérica para o usuário final
+    return jsonify({
+        'success': False, 
+        'message': 'Ocorreu um erro interno de processamento. Nossa equipe técnica foi notificada.'
+    }), 500
 
 # Configuração do Login
 login_manager = LoginManager()
@@ -281,11 +329,8 @@ def api_me():
     return jsonify({'authenticated': False})
 
 @app.route('/api/login', methods=['POST'])
-@csrf.exempt # API clients might struggle with CSRF initially, enables easier testing
 def api_login():
-    print("DEBUG: /api/login reached")
     data = request.get_json()
-    print(f"DEBUG: Login payload: {data}")
     if not data:
         return jsonify({'success': False, 'message': 'Missing JSON data'}), 400
         
@@ -700,7 +745,8 @@ def alterar_senha():
         return jsonify({'success': True, 'message': 'Senha alterada com sucesso!'})
     
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Erro ao alterar senha: {str(e)}'})
+        app.logger.error(f"Erro ao alterar senha: {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro ao alterar senha. Verifique se a senha atual está correta.'})
     finally:
         if conn:
             conn.close()
@@ -846,17 +892,18 @@ def criar_equipment():
         conn.rollback()
         if 'numero_serie' in str(e):
             return jsonify({'success': False, 'message': 'Número de série já existe'}), 400
-        return jsonify({'success': False, 'message': f'Erro de integridade: {str(e)}'}), 400
+        app.logger.error(f"Erro de integridade ao cadastrar equipment: {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro de integridade nos dados.'}), 400
     except Exception as e:
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao cadastrar equipment: {str(e)}'}), 500
+        app.logger.error(f"Erro ao cadastrar equipment: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Erro interno ao cadastrar equipamento.'}), 500
     finally:
         if conn:
             conn.close()
 
 # ROTA API PARA EQUIPMENT CONTROL - PUT (ATUALIZAR) - ATUALIZADA
 @app.route('/api/equipment-control/<int:equipment_id>', methods=['PUT'])
-@csrf.exempt
 @login_required
 def atualizar_equipment(equipment_id):
     # Verificar se é admin
@@ -941,7 +988,6 @@ def atualizar_equipment(equipment_id):
 
 # ROTA API PARA EQUIPMENT CONTROL - DELETE (EXCLUIR) - ATUALIZADA
 @app.route('/api/equipment-control/<int:equipment_id>', methods=['DELETE'])
-@csrf.exempt
 @login_required
 def excluir_equipment(equipment_id):
     # Verificar se é admin
@@ -1093,6 +1139,7 @@ def inventory():
     return render_template('inventory.html')
 
 @app.route('/api/inventory', methods=['GET', 'POST'])
+@csrf.exempt
 @login_required
 def api_inventory():
     if current_user.role != 'admin':
@@ -1223,6 +1270,7 @@ def api_inventory_item(item_id):
             conn.close()
 
 @app.route('/api/inventory/delete-multiple', methods=['POST'])
+@csrf.exempt
 @login_required
 def delete_multiple_inventory():
     if current_user.role != 'admin':
@@ -1657,6 +1705,39 @@ def api_alunos_pagina():
     finally:
         if conn: conn.close()
 
+@app.route('/api/alunos/lista', methods=['GET'])
+@login_required
+def api_alunos_lista():
+    """API para listar todos os alunos (usada em selects/modais)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Erro de conexão'}), 500
+    
+    try:
+        cursor = get_db_cursor(conn)
+        cursor.execute('SELECT id, nome FROM alunos ORDER BY nome ASC')
+        rows = cursor.fetchall()
+        
+        # Garantir que retorno seja uma lista de dicionários, independente do tipo de cursor
+        alunos = []
+        for row in rows:
+            if isinstance(row, dict):
+                alunos.append(row)
+            elif isinstance(row, (list, tuple)) and len(row) >= 2:
+                alunos.append({'id': row[0], 'nome': row[1]})
+            else:
+                # Fallback genérico para outros formatos
+                try:
+                    alunos.append({'id': row['id'], 'nome': row['nome']})
+                except:
+                    continue
+        
+        return jsonify({'success': True, 'data': alunos})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if conn: conn.close()
+
 
 @app.route('/api/alunos', methods=['POST'])
 @csrf.exempt
@@ -1829,7 +1910,7 @@ def api_aluno(aluno_id):
         
         elif request.method == 'DELETE':
             # Excluir aluno
-            cursor = conn.cursor()
+            cursor = get_db_cursor(conn)
             
             # Verificar se o aluno está em um empréstimo ativo
             cursor.execute("SELECT id FROM emprestimos WHERE aluno_id = %s AND status = 'Ativo'", (aluno_id,))
@@ -1851,6 +1932,58 @@ def api_aluno(aluno_id):
     finally:
         if conn:
             conn.close()
+
+@app.route('/api/alunos/bulk-delete', methods=['POST'])
+@csrf.exempt
+@login_required
+def bulk_delete_alunos():
+    data = request.get_json()
+    aluno_ids = data.get('ids', [])
+    
+    if not aluno_ids:
+        return jsonify({'success': False, 'message': 'Nenhum ID fornecido.'}), 400
+        
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Erro de conexão com o banco!'}), 500
+        
+    try:
+        cursor = get_db_cursor(conn)
+        
+        # Check for active loans first
+        if not aluno_ids:
+            return jsonify({'success': False, 'message': 'Nenhum ID fornecido.'}), 400
+            
+        format_strings = ','.join(['%s'] * len(aluno_ids))
+        cursor.execute(f"SELECT aluno_id FROM emprestimos WHERE aluno_id IN ({format_strings}) AND status = 'Ativo'", tuple(aluno_ids))
+        active_loans = cursor.fetchall()
+        
+        if active_loans:
+            cursor.close()
+            return jsonify({
+                'success': False, 
+                'message': 'Não é possível excluir alunos com empréstimos ativos!'
+            }), 400
+            
+        # Delete related data in emprestimos_livros first
+        cursor.execute(f"DELETE FROM emprestimos_livros WHERE aluno_id IN ({format_strings})", tuple(aluno_ids))
+        
+        # Delete related data in emprestimos
+        cursor.execute(f"DELETE FROM emprestimos WHERE aluno_id IN ({format_strings})", tuple(aluno_ids))
+        
+        # Finally delete students
+        cursor.execute(f"DELETE FROM alunos WHERE id IN ({format_strings})", tuple(aluno_ids))
+        
+        conn.commit()
+        cursor.close()
+        
+        return jsonify({'success': True, 'message': f'{len(aluno_ids)} alunos excluídos com sucesso!'})
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao processar exclusão em massa: {str(e)}'}), 500
+    finally:
+        if conn: conn.close()
 
 # =============================================================================
 # ROTAS DE DEVICES ATUALIZADAS COM OBSERVAÇÃO (MYSQL)
@@ -1930,9 +2063,7 @@ def devices():
                     'observacao': equipment.get('observacao', '') or ''
                 })
         
-        # Converter devices_list para JSON para passar ao JavaScript
-        devices_json = json.dumps(devices_list)
-        return render_template('devices.html', devices=devices_list, devices_json=devices_json)
+        return render_template('devices.html', devices=devices_list)
     
     except Exception as e:
         flash(f'Erro ao carregar devices: {str(e)}', 'error')
@@ -2159,6 +2290,7 @@ def api_device(device_id):
             conn.close()
 
 @app.route('/api/devices/delete-multiple', methods=['POST'])
+@csrf.exempt
 @login_required
 def delete_multiple_devices():
     if current_user.role != 'admin':
@@ -2258,7 +2390,7 @@ def emprestimos():
         if conn:
             conn.close()
 
-@app.route('/api/emprestimos', methods=['GET', 'POST'])
+@app.route('/api/emprestimos', methods=['GET'])
 @login_required
 def api_emprestimos():
     conn = get_db_connection()
@@ -2266,46 +2398,29 @@ def api_emprestimos():
         return jsonify({'success': False, 'message': 'Erro de conexão com o banco!'}), 500
         
     try:
-        if request.method == 'GET':
-            cursor = get_db_cursor(conn)
-            cursor.execute('''SELECT e.*, a.nome as aluno_nome, d.nome as device_nome, d.tipo as device_tipo
-                             FROM emprestimos e
-                             LEFT JOIN alunos a ON e.aluno_id = a.id
-                             LEFT JOIN devices d ON e.device_id = d.id
-                             ORDER BY e.data_retirada DESC''')
-            emprestimos = cursor.fetchall()
-            cursor.close()
-            
-            # Format dates
-            for emp in emprestimos:
-                if emp['data_retirada']:
-                    emp['data_retirada'] = emp['data_retirada'].isoformat()
-                if emp['data_devolucao']:
-                     emp['data_devolucao'] = emp['data_devolucao'].isoformat()
-            
-            return jsonify({'success': True, 'data': emprestimos})
+        cursor = get_db_cursor(conn)
+        cursor.execute('''SELECT e.*, a.nome as aluno_nome, d.nome as device_nome, d.tipo as device_tipo
+                         FROM emprestimos e
+                         LEFT JOIN alunos a ON e.aluno_id = a.id
+                         LEFT JOIN devices d ON e.device_id = d.id
+                         ORDER BY e.data_retirada DESC''')
+        emprestimos = cursor.fetchall()
+        cursor.close()
+        
+        # Format dates
+        for emp in emprestimos:
+            if emp['data_retirada']:
+                emp['data_retirada'] = emp['data_retirada'].isoformat()
+            if emp['data_devolucao']:
+                 emp['data_devolucao'] = emp['data_devolucao'].isoformat()
+        
+        return jsonify({'success': True, 'data': emprestimos})
 
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erro ao listar empréstimos: {str(e)}'}), 500
     finally:
-        if conn and request.method == 'GET': # Only close here if GET, POST logic closes inside creates
+        if conn:
              conn.close()
-
-# Mantendo rota separada para POST para minimizar impacto no diff ou refatorar? 
-# O código original tinha @app.route('/api/emprestimos', methods=['POST']) def criar_emprestimo():
-# Vou renomear a função de POST para evitar conflito se eu juntar, ou manter separado.
-# Melhor manter separado para clareza se a lógica for complexa, mas usar URLs diferentes ou métodos na mesma URL.
-# Neste caso, vou usar a mesma URL /api/emprestimos se possível, mas o flask não permite duas funcoes com mesma regra.
-# VOU ALTERAR a definição anterior para ser APENAS POST e adicionar a GET separada ou fundir.
-# A melhor abordagem é fundir.
-
-@app.route('/api/emprestimos/criar', methods=['POST']) # Renaming old POST to specific path or keeping generic?
-# Wait, RESTful convention: GET /api/loans, POST /api/loans.
-# So I should merge them into one function `api_emprestimos`.
-# I will DELETE the old `criar_emprestimo` definition header and merge logic?
-# Or just put GET in a new route `/api/emprestimos/lista` like `/api/alunos/lista` to avoid conflict with existing POST function if I don't want to rewrite it fully.
-# Given `api_alunos_lista` exists, `/api/emprestimos/lista` is consistent with current naming scheme.
-# I will use `/api/emprestimos/lista`.
 
 @app.route('/api/emprestimos/lista', methods=['GET'])
 @login_required
@@ -2339,6 +2454,7 @@ def api_emprestimos_lista():
         if conn: conn.close()
 
 @app.route('/api/emprestimos', methods=['POST'])
+@csrf.exempt
 @login_required
 def criar_emprestimo():
     conn = get_db_connection()
@@ -2433,6 +2549,7 @@ def devolver_emprestimo(emprestimo_id):
 # =============================================================================
 
 @app.route('/api/emprestimos/assinatura', methods=['POST'])
+@csrf.exempt
 @login_required
 def adicionar_assinatura():
     conn = get_db_connection()
@@ -2520,6 +2637,7 @@ def excluir_emprestimo(emprestimo_id):
 # =============================================================================
 
 @app.route('/api/emprestimos/delete-multiple', methods=['POST'])
+@csrf.exempt
 @login_required
 def delete_multiple_emprestimos():
     if current_user.role != 'admin':
@@ -2583,22 +2701,22 @@ def api_admin():
         cursor = get_db_cursor(conn) # Use helper
         
         # Estatísticas para admin
-        cursor.execute("SELECT COUNT(*) FROM users")
+        cursor.execute("SELECT COUNT(*) as total FROM users")
         row = cursor.fetchone()
-        total_usuarios = row['count'] if 'count' in row else list(row.values())[0] # Handle different return types
+        total_usuarios = row['total'] if 'total' in row else list(row.values())[0] # Handle different return types
         
-        cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'")
+        cursor.execute("SELECT COUNT(*) as total FROM users WHERE role = 'admin'")
         row = cursor.fetchone()
-        admin_users = row['count'] if 'count' in row else list(row.values())[0]
+        admin_users = row['total'] if 'total' in row else list(row.values())[0]
         
-        cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'user'")
+        cursor.execute("SELECT COUNT(*) as total FROM users WHERE role = 'user'")
         row = cursor.fetchone()
-        common_users = row['count'] if 'count' in row else list(row.values())[0]
+        common_users = row['total'] if 'total' in row else list(row.values())[0]
         
         # Contar tipos de devices
-        cursor.execute("SELECT COUNT(*) FROM tipos_devices")
+        cursor.execute("SELECT COUNT(*) as total FROM tipos_devices")
         row = cursor.fetchone()
-        total_tipos = row['count'] if 'count' in row else list(row.values())[0]
+        total_tipos = row['total'] if 'total' in row else list(row.values())[0]
         
         # Últimos logs de atividade (exemplo)
         cursor.execute('SELECT id, username, role FROM users ORDER BY id DESC LIMIT 5')
@@ -2623,6 +2741,7 @@ def api_admin():
         if conn: conn.close()
 
 @app.route('/api/admin/tipos-devices', methods=['GET'])
+@csrf.exempt
 @login_required
 def api_admin_tipos_devices():
     if current_user.role != 'admin':
@@ -2657,6 +2776,7 @@ def api_admin_tipos_devices():
         if conn: conn.close()
 
 @app.route('/api/admin/users', methods=['GET'])
+@csrf.exempt
 @login_required
 def api_admin_users():
     if current_user.role != 'admin':
@@ -3141,6 +3261,7 @@ def importar_alunos():
         return jsonify({'success': False, 'message': f'Erro na importação: {str(e)}'})
 
 @app.route('/api/importar/devices', methods=['POST'])
+@csrf.exempt
 @login_required
 def importar_devices():
     try:
@@ -3578,6 +3699,7 @@ def api_dashboard_stats():
 # =============================================================================
 
 @app.route('/api/tipos-devices', methods=['GET', 'POST'])
+@csrf.exempt
 @login_required
 def api_tipos_devices():
     if current_user.role != 'admin':
@@ -4030,6 +4152,7 @@ def criar_emprestimo_livro():
     
     try:
             data = request.json
+            print(f"DEBUG: criando emprestimo livro - data keys: {list(data.keys()) if data else 'None'}")
             aluno_id = data.get('aluno_id')
             codigo_barras = data.get('codigo_barras', '').strip()
             data_retirada_str = data.get('data_retirada') # Nova data customizada
@@ -4059,11 +4182,11 @@ def criar_emprestimo_livro():
             if exemplar['status'] != 'Disponível':
                 return jsonify({'success': False, 'message': f"Exemplar indisponível (Status: {exemplar['status']})"})
 
-            # Registrar empréstimo (Atualizado com criado_por e data customizada)
+            # Registrar empréstimo (Atualizado com criado_por, assinatura e data customizada)
             cursor.execute('''
-                INSERT INTO emprestimos_livros (aluno_id, exemplar_id, data_retirada, data_previsao_devolucao, status, criado_por)
-                VALUES (%s, %s, %s, %s, 'Ativo', %s)
-            ''', (aluno_id, exemplar['id'], data_retirada, data_previsao, current_user.id))
+                INSERT INTO emprestimos_livros (aluno_id, exemplar_id, data_retirada, data_previsao_devolucao, status, criado_por, assinatura)
+                VALUES (%s, %s, %s, %s, 'Ativo', %s, %s)
+            ''', (aluno_id, exemplar['id'], data_retirada, data_previsao, current_user.id, data.get('assinatura')))
             
             # Atualizar status do exemplar
             cursor.execute("UPDATE exemplares SET status = 'Emprestado' WHERE id = %s", (exemplar['id'],))
@@ -4509,7 +4632,7 @@ def enviar_alerta_atraso():
     finally:
         if conn: conn.close()
 
-@app.route('/api/livros', methods=['GET', 'POST', 'PUT'])
+@app.route('/api/livros', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @csrf.exempt
 @login_required
 def api_livros():
@@ -4575,6 +4698,24 @@ def api_livros():
                   data.get('editora'), data.get('edicao'), data.get('descricao'), livro_id))
             conn.commit()
             return jsonify({'success': True, 'message': 'Livro atualizado com sucesso!'})
+
+        elif request.method == 'DELETE':
+            if current_user.role != 'admin':
+                return jsonify({'success': False, 'message': 'Não autorizado'}), 403
+            
+            livro_id = request.args.get('id')
+            if not livro_id:
+                return jsonify({'success': False, 'message': 'ID do livro é obrigatório'}), 400
+            
+            # Verificar se existem exemplares
+            cursor.execute('SELECT COUNT(*) as count FROM exemplares WHERE livro_id = %s', (livro_id,))
+            result = cursor.fetchone()
+            if result and result['count'] > 0:
+                return jsonify({'success': False, 'message': 'Não é possível excluir um livro que possui exemplares cadastrados.'}), 400
+
+            cursor.execute('DELETE FROM livros WHERE id = %s', (livro_id,))
+            conn.commit()
+            return jsonify({'success': True, 'message': 'Livro excluído com sucesso!'})
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -5143,4 +5284,6 @@ def upload_user_foto(user_id):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    # Em produção, debug deve ser False. Use variável de ambiente FLASK_DEBUG=True para desenvolvimento.
+    is_debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=5001, debug=is_debug)

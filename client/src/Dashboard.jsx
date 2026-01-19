@@ -111,11 +111,11 @@ export default function Dashboard() {
     const regularAlunos = totalAlunos - foundationAlunos;
 
     return (
-        <div className="p-8 bg-gray-50 min-h-screen">
+        <div className="bg-gray-50">
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-                <p className="text-gray-500">Visão geral do sistema de gerenciamento da Academy</p>
+            <div className="mb-6 md:mb-8">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+                <p className="text-sm md:text-base text-gray-500">Visão geral do sistema de gerenciamento da Academy</p>
             </div>
 
             {/* Main Metrics Grid */}

@@ -2,7 +2,6 @@
 from werkzeug.security import generate_password_hash
 
 @app.route('/api/admin/users', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_create_user():
     """Create new user"""
@@ -46,14 +45,14 @@ def api_create_user():
         return jsonify({'success': True, 'message': 'Usuário criado com sucesso!'})
         
     except Exception as e:
+        app.logger.error(f"Erro ao criar usuário: {str(e)}", exc_info=True)
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao criar usuário: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Erro interno ao criar usuário.'}), 500
     finally:
         if conn: conn.close()
 
 
 @app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
-@csrf.exempt
 @login_required
 def api_update_user(user_id):
     """Update existing user"""
@@ -103,14 +102,14 @@ def api_update_user(user_id):
         return jsonify({'success': True, 'message': 'Usuário atualizado com sucesso!'})
         
     except Exception as e:
+        app.logger.error(f"Erro ao atualizar usuário: {str(e)}", exc_info=True)
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao atualizar usuário: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Erro interno ao atualizar usuário.'}), 500
     finally:
         if conn: conn.close()
 
 
 @app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
-@csrf.exempt
 @login_required
 def api_delete_user(user_id):
     """Delete user"""
@@ -134,8 +133,9 @@ def api_delete_user(user_id):
         return jsonify({'success': True, 'message': 'Usuário excluído com sucesso!'})
         
     except Exception as e:
+        app.logger.error(f"Erro ao excluir usuário: {str(e)}", exc_info=True)
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao excluir usuário: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Erro interno ao excluir usuário.'}), 500
     finally:
         if conn: conn.close()
 
@@ -143,7 +143,6 @@ def api_delete_user(user_id):
 # Device Types Management Routes
 
 @app.route('/api/admin/tipos-devices', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_create_device_type():
     """Create new device type"""
@@ -182,14 +181,14 @@ def api_create_device_type():
         return jsonify({'success': True, 'message': 'Tipo de device criado com sucesso!'})
         
     except Exception as e:
+        app.logger.error(f"Erro ao criar tipo de device: {str(e)}", exc_info=True)
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao criar tipo: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Erro interno ao criar tipo de dispositivo.'}), 500
     finally:
         if conn: conn.close()
 
 
 @app.route('/api/admin/tipos-devices/<int:tipo_id>', methods=['PUT'])
-@csrf.exempt
 @login_required
 def api_update_device_type(tipo_id):
     """Update existing device type"""
@@ -228,14 +227,14 @@ def api_update_device_type(tipo_id):
         return jsonify({'success': True, 'message': 'Tipo de device atualizado com sucesso!'})
         
     except Exception as e:
+        app.logger.error(f"Erro ao atualizar tipo de device: {str(e)}", exc_info=True)
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao atualizar tipo: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Erro interno ao atualizar tipo de dispositivo.'}), 500
     finally:
         if conn: conn.close()
 
 
 @app.route('/api/admin/tipos-devices/<int:tipo_id>', methods=['DELETE'])
-@csrf.exempt
 @login_required
 def api_delete_device_type(tipo_id):
     """Delete device type"""
@@ -264,7 +263,8 @@ def api_delete_device_type(tipo_id):
         return jsonify({'success': True, 'message': 'Tipo de device excluído com sucesso!'})
         
     except Exception as e:
+        app.logger.error(f"Erro ao excluir tipo de device: {str(e)}", exc_info=True)
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Erro ao excluir tipo: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': 'Erro interno ao excluir tipo de dispositivo.'}), 500
     finally:
         if conn: conn.close()

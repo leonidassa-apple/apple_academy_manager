@@ -220,6 +220,8 @@ def create_tables():
                           status VARCHAR(50) DEFAULT 'Ativo',
                           renovacoes INT DEFAULT 0,
                           observacao TEXT,
+                          criado_por INT,
+                          assinatura LONGTEXT,
                           FOREIGN KEY (exemplar_id) REFERENCES exemplares (id),
                           FOREIGN KEY (aluno_id) REFERENCES alunos (id))""")
 
@@ -252,7 +254,7 @@ def create_tables():
 
         # Criar usuário admin padrão
         try:
-            admin_password = generate_password_hash('admin123')
+            admin_password = generate_password_hash(os.getenv('ADMIN_PASSWORD', 'admin123'))
             sql = "INSERT INTO users (username, password, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING" if db_type == 'postgres' else "INSERT IGNORE INTO users (username, password, role) VALUES (%s, %s, %s)"
             cursor.execute(sql, ('admin', admin_password, 'admin'))
         except Exception as e:

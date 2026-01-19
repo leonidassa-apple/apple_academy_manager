@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Monitor } from 'lucide-react';
 
 export default function DeviceModal({ isOpen, onClose, onSave, device = null }) {
     const [formData, setFormData] = useState({
@@ -99,210 +99,258 @@ export default function DeviceModal({ isOpen, onClose, onSave, device = null }) 
         }));
     };
 
+    if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-800">
-                        {device ? 'Editar Device' : 'Novo Device'}
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
 
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3">
-                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Informações Básicas</h3>
+            <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+                <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-3xl border border-gray-100 flex flex-col max-h-[90vh]">
+
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-5 flex justify-between items-center shrink-0">
+                        <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-white/20 rounded-lg backdrop-blur-md">
+                                <Monitor className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-white tracking-tight">
+                                    {device ? 'Editar Equipamento' : 'Novo Equipamento'}
+                                </h2>
+                                <p className="text-blue-100 text-xs">Preencha as informações do device</p>
+                            </div>
                         </div>
+                        <button onClick={onClose} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                            <select
-                                name="tipo"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.tipo}
-                                onChange={handleChange}
-                            >
-                                <option value="MacBook">MacBook</option>
-                                <option value="iPad">iPad</option>
-                                <option value="iPhone">iPhone</option>
-                                <option value="Apple Watch">Apple Watch</option>
-                                <option value="Apple TV">Apple TV</option>
-                                <option value="Acessório">Acessório</option>
-                            </select>
-                        </div>
+                    {/* Body */}
+                    <form onSubmit={handleSubmit} className="overflow-y-auto">
+                        <div className="p-6 space-y-8">
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome (Identificador)</label>
-                            <input
-                                type="text"
-                                name="nome"
-                                required
-                                placeholder="Ex: MacBook do João"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.nome}
-                                onChange={handleChange}
-                            />
-                        </div>
+                            {/* Section: Basic Info */}
+                            <div>
+                                <div className="flex items-center space-x-2 mb-4">
+                                    <div className="h-4 w-1 bg-blue-600 rounded-full"></div>
+                                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider text-xs">Informações Básicas</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tipo</label>
+                                        <select
+                                            name="tipo"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all"
+                                            value={formData.tipo}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="MacBook">MacBook</option>
+                                            <option value="iPad">iPad</option>
+                                            <option value="iPhone">iPhone</option>
+                                            <option value="Apple Watch">Apple Watch</option>
+                                            <option value="Apple TV">Apple TV</option>
+                                            <option value="Acessório">Acessório</option>
+                                        </select>
+                                    </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Número de Série</label>
-                            <input
-                                type="text"
-                                name="numero_serie"
-                                required
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 uppercase"
-                                value={formData.numero_serie}
-                                onChange={handleChange}
-                            />
-                        </div>
+                                    <div className="md:col-span-2 lg:col-span-1">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nome (Identificador)</label>
+                                        <input
+                                            type="text"
+                                            name="nome"
+                                            required
+                                            placeholder="Ex: MacBook do João"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all placeholder:text-gray-400"
+                                            value={formData.nome || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
-                            <input
-                                type="text"
-                                name="modelo"
-                                placeholder="Ex: Pro M1"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.modelo}
-                                onChange={handleChange}
-                            />
-                        </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Série / Serial</label>
+                                        <input
+                                            type="text"
+                                            name="numero_serie"
+                                            required
+                                            placeholder="Ex: C02X..."
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all uppercase placeholder:text-gray-400"
+                                            value={formData.numero_serie || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cor</label>
-                            <input
-                                type="text"
-                                name="cor"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.cor}
-                                onChange={handleChange}
-                            />
-                        </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Modelo</label>
+                                        <input
+                                            type="text"
+                                            name="modelo"
+                                            placeholder="Ex: Pro M1"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all placeholder:text-gray-400"
+                                            value={formData.modelo || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Ano</label>
-                            <input
-                                type="text"
-                                name="ano"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.ano}
-                                onChange={handleChange}
-                            />
-                        </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cor</label>
+                                        <input
+                                            type="text"
+                                            name="cor"
+                                            placeholder="Ex: Space Gray"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all placeholder:text-gray-400"
+                                            value={formData.cor || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
 
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-2">
-                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Especificações</h3>
-                        </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Ano</label>
+                                        <input
+                                            type="text"
+                                            name="ano"
+                                            placeholder="Ex: 2021"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all placeholder:text-gray-400"
+                                            value={formData.ano || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Chip/Processador</label>
-                            <input
-                                type="text"
-                                name="chip"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.chip}
-                                onChange={handleChange}
-                            />
-                        </div>
+                            {/* Section: Technical Info */}
+                            <div>
+                                <div className="flex items-center space-x-2 mb-4">
+                                    <div className="h-4 w-1 bg-indigo-600 rounded-full"></div>
+                                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider text-xs">Especificações Técnicas</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Chip / Processador</label>
+                                        <input
+                                            type="text"
+                                            name="chip"
+                                            placeholder="Ex: M1 Pro"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all placeholder:text-gray-400"
+                                            value={formData.chip || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Memória (RAM)</label>
+                                        <input
+                                            type="text"
+                                            name="memoria"
+                                            placeholder="Ex: 16GB"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all placeholder:text-gray-400"
+                                            value={formData.memoria || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tamanho (Pol)</label>
+                                        <input
+                                            type="text"
+                                            name="polegadas"
+                                            placeholder="Ex: 14"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all placeholder:text-gray-400"
+                                            value={formData.polegadas || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Memória</label>
-                            <input
-                                type="text"
-                                name="memoria"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.memoria}
-                                onChange={handleChange}
-                            />
-                        </div>
+                            {/* Section: Status */}
+                            <div>
+                                <div className="flex items-center space-x-2 mb-4">
+                                    <div className="h-4 w-1 bg-emerald-600 rounded-full"></div>
+                                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider text-xs">Estado & Controle</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Versão do SO</label>
+                                        <input
+                                            type="text"
+                                            name="versao_os"
+                                            placeholder="Ex: macOS Sonoma"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all placeholder:text-gray-400"
+                                            value={formData.versao_os || ''}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Status Inicial</label>
+                                        <select
+                                            name="status"
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-3 outline-none transition-all"
+                                            value={formData.status}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="Disponível">Disponível</option>
+                                            <option value="Manutenção">Manutenção</option>
+                                            <option value="Perdido">Perdido</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex items-start pt-8">
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                name="para_emprestimo"
+                                                className="sr-only peer"
+                                                checked={formData.para_emprestimo}
+                                                onChange={handleChange}
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                            <span className="ml-3 text-sm font-bold text-gray-700">Para Empréstimo?</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tamanho (Pol)</label>
-                            <input
-                                type="text"
-                                name="polegadas"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.polegadas}
-                                onChange={handleChange}
-                            />
-                        </div>
-
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-2">
-                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Estado & Controle</h3>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Versão OS</label>
-                            <input
-                                type="text"
-                                name="versao_os"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.versao_os}
-                                onChange={handleChange}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Status Atual</label>
-                            <select
-                                name="status"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.status}
-                                onChange={handleChange}
-                            >
-                                <option value="Disponível">Disponível</option>
-                                <option value="Emprestado">Emprestado</option>
-                                <option value="Manutenção">Manutenção</option>
-                                <option value="Perdido">Perdido</option>
-                            </select>
-                        </div>
-
-                        <div className="flex items-center pt-6">
-                            <label className="flex items-center space-x-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    name="para_emprestimo"
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                    checked={formData.para_emprestimo}
+                            {/* Section: Observations */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Observações Detalhadas</label>
+                                <textarea
+                                    name="observacao"
+                                    rows="3"
+                                    placeholder="Informações adicionais, defeitos ou detalhes importantes..."
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block p-4 outline-none transition-all placeholder:text-gray-400 resize-none"
+                                    value={formData.observacao || ''}
                                     onChange={handleChange}
-                                />
-                                <span className="text-gray-700 font-medium">Disponível para Empréstimo?</span>
-                            </label>
+                                ></textarea>
+                            </div>
                         </div>
 
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-                            <textarea
-                                name="observacao"
-                                rows="3"
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.observacao}
-                                onChange={handleChange}
-                            ></textarea>
+                        {/* Footer */}
+                        <div className="bg-gray-50/80 px-8 py-6 flex justify-end gap-4 shrink-0 border-t border-gray-100">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-6 py-3 text-sm font-bold text-gray-600 hover:text-gray-800 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl hover:from-blue-700 hover:to-indigo-800 transition-all font-bold shadow-lg shadow-blue-200 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white mr-3"></div>
+                                        Processando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-5 h-5 mr-2" />
+                                        {device ? 'Salvar Alterações' : 'Cadastrar Device'}
+                                    </>
+                                )}
+                            </button>
                         </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        >
-                            <Save className="w-4 h-4 mr-2" />
-                            {loading ? 'Salvando...' : 'Salvar Device'}
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );

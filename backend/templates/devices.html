@@ -406,7 +406,7 @@
 
 {% block scripts %}
 <!-- Dados JSON dos devices passados do backend -->
-<div id="devicesData" data-devices='{{ devices_json | safe }}' style="display: none;"></div>
+<div id="devicesData" data-devices='{{ devices | tojson }}' style="display: none;"></div>
 
 <script>
     // Variáveis globais para paginação

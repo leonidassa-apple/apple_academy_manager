@@ -132,366 +132,334 @@ export default function Admin() {
     );
 
     return (
-        <div className="space-y-8 animate-fade-in-up">
+        <div className="p-6 max-w-[1600px] mx-auto animate-in fade-in duration-700">
+            {/* Command Center Header */}
+            <div className="bg-white rounded-[2rem] p-8 mb-8 shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-50/50 rounded-full -mr-48 -mt-48 blur-3xl"></div>
 
-            {/* Header */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
-                        <Shield className="w-8 h-8 text-blue-600" />
-                        Painel Administrativo
-                    </h1>
-                    <p className="text-gray-500 mt-1">Central de controle e configurações do sistema</p>
+                <div className="relative z-10 flex items-center gap-6">
+                    <div className="p-4 bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl shadow-xl shadow-slate-200">
+                        <Shield size={36} className="text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-tight uppercase">Admin Center</h1>
+                        <div className="flex items-center gap-2 mt-1 text-slate-500 font-medium">
+                            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Sistema em conformidade e atualizado
+                        </div>
+                    </div>
                 </div>
-                {/* Stats Summary could go here in small pills if needed */}
+
+                <div className="relative z-10 flex gap-3">
+                    <div className="px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Database</span>
+                        <span className="text-sm font-bold text-slate-700">Production</span>
+                    </div>
+                </div>
             </div>
 
-            {/* Main Content Area */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
+            {/* Navigation & Content Wrapper */}
+            <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden min-h-[600px] flex flex-col">
 
-                {/* Tabs Navigation */}
-                <div className="flex border-b border-gray-200 overflow-x-auto bg-gray-50/50">
-                    <TabButton id="dashboard" label="Visão Geral" icon={Activity} />
-                    <TabButton id="users" label="Usuários" icon={Users} />
-                    <TabButton id="types" label="Tipos de Device" icon={Smartphone} />
-                    <TabButton id="system" label="Sistema & Backup" icon={Database} />
+                {/* Modern Pill Navigation */}
+                <div className="px-8 pt-8 flex border-b border-slate-50 overflow-x-auto gap-2 bg-slate-50/20">
+                    {[
+                        { id: 'dashboard', label: 'Dashboard', icon: Activity },
+                        { id: 'users', label: 'Equipe', icon: Users },
+                        { id: 'types', label: 'Catálogo', icon: Smartphone },
+                        { id: 'system', label: 'Infraestrutura', icon: Database }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-3 px-8 py-4 font-black text-xs uppercase tracking-widest transition-all rounded-t-3xl relative ${activeTab === tab.id
+                                    ? 'bg-white text-indigo-600 border-x border-t border-slate-100 translate-y-[1px] z-10 shadow-[0_-8px_20px_-10px_rgba(0,0,0,0.05)]'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                        >
+                            <tab.icon size={16} className={activeTab === tab.id ? 'text-indigo-600' : 'text-slate-300'} />
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
 
-                <div className="p-6">
-                    {/* Dashboard Tab */}
+                <div className="p-10 flex-grow bg-white relative">
+                    {/* Dashboard Segment */}
                     {activeTab === 'dashboard' && stats && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
-                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <Users className="w-24 h-24 transform rotate-12" />
-                                </div>
-                                <div className="relative z-10">
-                                    <p className="text-blue-100 font-medium mb-1">Total Usuários</p>
-                                    <h3 className="text-4xl font-bold">{stats.total_usuarios}</h3>
-                                    <div className="mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/30 text-white border border-blue-400/30">
-                                        {stats.admin_users} Admins
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-indigo-200 relative overflow-hidden group">
+                                    <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                                    <div className="relative z-10">
+                                        <div className="p-3 bg-white/10 rounded-2xl w-fit mb-6 backdrop-blur-md">
+                                            <Users size={24} />
+                                        </div>
+                                        <p className="text-indigo-100 font-black text-xs uppercase tracking-widest mb-1">Total de Colaboradores</p>
+                                        <h3 className="text-5xl font-black tracking-tighter">{stats.total_usuarios}</h3>
+                                        <div className="mt-8 flex items-center gap-2">
+                                            <span className="px-4 py-1.5 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-sm">
+                                                {stats.admin_users} Super-Users
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-6 rounded-2xl text-white shadow-lg shadow-indigo-500/20 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <Shield className="w-24 h-24 transform rotate-12" />
+                                <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-slate-200 relative overflow-hidden group">
+                                    <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                                    <div className="relative z-10">
+                                        <div className="p-3 bg-white/10 rounded-2xl w-fit mb-6 backdrop-blur-md">
+                                            <Shield size={24} />
+                                        </div>
+                                        <p className="text-slate-400 font-black text-xs uppercase tracking-widest mb-1">Privilégios Elevados</p>
+                                        <h3 className="text-5xl font-black tracking-tighter">{stats.admin_users}</h3>
+                                        <p className="text-slate-500 font-bold text-sm mt-2 tracking-tight">Administradores com acesso total</p>
+                                    </div>
                                 </div>
-                                <div className="relative z-10">
-                                    <p className="text-indigo-100 font-medium mb-1">Nível de Acesso</p>
-                                    <h3 className="text-4xl font-bold">{stats.admin_users}</h3>
-                                    <p className="text-indigo-200 text-sm mt-1">Administradores ativos</p>
-                                </div>
-                            </div>
 
-                            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-2xl text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <Smartphone className="w-24 h-24 transform rotate-12" />
-                                </div>
-                                <div className="relative z-10">
-                                    <p className="text-emerald-100 font-medium mb-1">Tipos de Device</p>
-                                    <h3 className="text-4xl font-bold">{stats.total_tipos}</h3>
-                                    <p className="text-emerald-200 text-sm mt-1">Categorias cadastradas</p>
+                                <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-emerald-100 relative overflow-hidden group">
+                                    <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                                    <div className="relative z-10">
+                                        <div className="p-3 bg-white/10 rounded-2xl w-fit mb-6 backdrop-blur-md">
+                                            <Smartphone size={24} />
+                                        </div>
+                                        <p className="text-emerald-100 font-black text-xs uppercase tracking-widest mb-1">Tipos de Inventário</p>
+                                        <h3 className="text-5xl font-black tracking-tighter">{stats.total_tipos}</h3>
+                                        <p className="text-emerald-200 font-bold text-sm mt-2 tracking-tight">Segmentos de devices ativos</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Users Tab */}
+                    {/* Users Segment */}
                     {activeTab === 'users' && (
-                        <div className="space-y-6 animate-fade-in">
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                                <div className="relative w-full md:max-w-md">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+                                <div className="relative w-full md:max-w-xl">
+                                    <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-300" size={20} />
                                     <input
                                         type="text"
-                                        placeholder="Buscar usuário por nome, email ou cargo..."
-                                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all shadow-sm"
+                                        placeholder="Filtrar por nome, email ou cargo..."
+                                        className="w-full pl-14 pr-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:bg-white transition-all text-slate-600 font-bold shadow-sm"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
                                 <button
                                     onClick={handleCreateUser}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/30 font-medium active:scale-95"
+                                    className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-indigo-600 to-violet-700 text-white rounded-3xl hover:from-indigo-700 hover:to-violet-800 transition-all shadow-xl shadow-indigo-100 font-black text-xs uppercase tracking-widest active:scale-95 group"
                                 >
-                                    <Plus className="w-5 h-5" />
-                                    Novo Usuário
+                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                                    Adicionar Colaborador
                                 </button>
                             </div>
 
-                            <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50/80 border-b border-gray-200">
+                            <div className="overflow-x-auto rounded-[2.5rem] border border-slate-50 bg-slate-50/10">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50/50 border-b border-slate-100">
                                         <tr>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuário</th>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contato</th>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Perfil</th>
-                                            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                                            <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Colaborador</th>
+                                            <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Privilégios</th>
+                                            <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Controles</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100 bg-white">
-                                        {filteredUsers.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
-                                                    Nenhum usuário encontrado.
+                                    <tbody className="divide-y divide-slate-50">
+                                        {filteredUsers.map(u => (
+                                            <tr key={u.id} className="hover:bg-indigo-50/30 transition-all duration-300 group">
+                                                <td className="px-10 py-6">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className="relative">
+                                                            {u.foto_path ? (
+                                                                <img
+                                                                    src={`/${u.foto_path}`}
+                                                                    alt=""
+                                                                    className="w-14 h-14 rounded-2xl object-cover ring-4 ring-white shadow-lg"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 flex items-center justify-center text-indigo-600 font-black text-xl border-2 border-white shadow-md">
+                                                                    {u.username?.[0]?.toUpperCase()}
+                                                                </div>
+                                                            )}
+                                                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm ${u.role === 'admin' ? 'bg-indigo-500' : 'bg-emerald-500'}`}></div>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-base font-black text-slate-900 leading-none">{u.username}</p>
+                                                            <p className="text-xs font-bold text-slate-400 mt-1.5">{u.email || 'Sem email vinculado'}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${u.role === 'admin'
+                                                            ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
+                                                            : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                                                        }`}>
+                                                        {u.role === 'admin' && <Shield size={12} />}
+                                                        {u.role === 'admin' ? 'Acesso Total (Root)' : u.role}
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6 text-right">
+                                                    <div className="flex justify-end gap-3 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                                                        <button onClick={() => handleEditUser(u)} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-xl shadow-none hover:shadow-lg transition-all">
+                                                            <Edit2 size={18} />
+                                                        </button>
+                                                        <button onClick={() => handleDeleteUser(u.id)} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-white rounded-xl shadow-none hover:shadow-lg transition-all">
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        ) : (
-                                            filteredUsers.map(u => (
-                                                <tr key={u.id} className="hover:bg-gray-50/80 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center">
-                                                            <div className="flex-shrink-0 h-10 w-10 relative">
-                                                                {u.foto_path ? (
-                                                                    <img
-                                                                        src={`/${u.foto_path.replace('uploads/', 'uploads/')}`}
-                                                                        alt={u.username}
-                                                                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                                                    />
-                                                                ) : (
-                                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border-2 border-white shadow-sm text-gray-500 font-bold">
-                                                                        {u.username?.[0]?.toUpperCase()}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="ml-4">
-                                                                <div className="text-sm font-semibold text-gray-900">{u.username}</div>
-                                                                <div className="text-xs text-gray-400">ID: {u.id}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                                        {u.email ? (
-                                                            <span className="flex items-center gap-1.5"><Search className="w-3 h-3" /> {u.email}</span>
-                                                        ) : (
-                                                            <span className="text-gray-400 italic">-</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${u.role === 'admin'
-                                                            ? 'bg-purple-50 text-purple-700 border-purple-100'
-                                                            : u.role === 'professor'
-                                                                ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                                                : 'bg-gray-50 text-gray-700 border-gray-100'
-                                                            }`}>
-                                                            {u.role === 'admin' && <Shield className="w-3 h-3 mr-1" />}
-                                                            {u.role === 'admin' ? 'Administrador' : u.role === 'professor' ? 'Professor' : 'Usuário'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={() => handleEditUser(u)}
-                                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                                                                title="Editar"
-                                                            >
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteUser(u.id)}
-                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                                                                title="Excluir"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     )}
 
-                    {/* Device Types Tab */}
+                    {/* Device Types Segment */}
                     {activeTab === 'types' && (
-                        <div className="space-y-6 animate-fade-in">
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                                <div className="relative w-full md:max-w-md">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+                                <div className="relative w-full md:max-w-xl">
+                                    <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-300" size={20} />
                                     <input
                                         type="text"
-                                        placeholder="Buscar tipo por nome ou categoria..."
-                                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all shadow-sm"
+                                        placeholder="Buscar por nome ou segmento..."
+                                        className="w-full pl-14 pr-8 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:bg-white transition-all text-slate-600 font-bold shadow-sm"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
                                 <button
                                     onClick={handleCreateDeviceType}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/30 font-medium active:scale-95"
+                                    className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-3xl hover:from-emerald-700 hover:to-teal-800 transition-all shadow-xl shadow-emerald-100 font-black text-xs uppercase tracking-widest active:scale-95 group"
                                 >
-                                    <Plus className="w-5 h-5" />
-                                    Novo Tipo
+                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                                    Novo Segmento
                                 </button>
                             </div>
 
-                            <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50/80 border-b border-gray-200">
-                                        <tr>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Device / Categoria</th>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Descrição</th>
-                                            <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Empréstimo</th>
-                                            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 bg-white">
-                                        {filteredDeviceTypes.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
-                                                    Nenhum tipo de device encontrado.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            filteredDeviceTypes.map(t => (
-                                                <tr key={t.id} className="hover:bg-gray-50/80 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center">
-                                                            <div className="p-2 bg-gray-100 rounded-lg mr-3 text-gray-600">
-                                                                <Smartphone className="w-5 h-5" />
-                                                            </div>
-                                                            <div>
-                                                                <div className="text-sm font-medium text-gray-900">{t.nome}</div>
-                                                                <div className="text-xs text-gray-500">{t.categoria}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                                        {t.descricao || <span className="text-gray-400 italic">Sem descrição</span>}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        {t.para_emprestimo ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-xs font-medium">
-                                                                <CheckCircle className="w-3 h-3" />
-                                                                Ativo
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gray-50 text-gray-500 border border-gray-100 rounded-full text-xs font-medium">
-                                                                Indisponível
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={() => handleEditDeviceType(t)}
-                                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-                                                                title="Editar"
-                                                            >
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteDeviceType(t.id)}
-                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                                                                title="Excluir"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                {filteredDeviceTypes.map(t => (
+                                    <div key={t.id} className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 group relative overflow-hidden flex flex-col">
+                                        <div className="p-4 bg-slate-50 rounded-2xl w-fit mb-8 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-500">
+                                            <Smartphone size={32} strokeWidth={1.5} />
+                                        </div>
+                                        <div className="space-y-2 mb-8">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.categoria}</p>
+                                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">{t.nome}</h3>
+                                            <p className="text-slate-500 text-sm font-medium line-clamp-2">{t.descricao || 'Sem descrição detalhada'}</p>
+                                        </div>
+
+                                        <div className="mt-auto flex justify-between items-center pt-8 border-t border-slate-50">
+                                            <div className={`px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest ${t.para_emprestimo ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'
+                                                }`}>
+                                                {t.para_emprestimo ? 'Elegível para empréstimo' : 'Uso Interno'}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => handleEditDeviceType(t)} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-all">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => handleDeleteDeviceType(t.id)} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded-xl transition-all">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
 
-                    {/* System & Backup Tab */}
+                    {/* Infrastructure Segment (System & Backup) */}
                     {activeTab === 'system' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                                        <Database className="w-6 h-6" />
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                <div className="bg-white p-12 rounded-[3rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-500 group">
+                                    <div className="flex items-center gap-6 mb-10">
+                                        <div className="p-6 bg-indigo-50 text-indigo-600 rounded-[2rem] group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-500 shadow-lg shadow-indigo-100">
+                                            <Database size={40} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Preservação de Dados</h3>
+                                            <p className="text-slate-400 font-bold text-sm tracking-tight uppercase">Exportação SQL completa</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-800">Backup do Sistema</h3>
-                                        <p className="text-sm text-gray-500">Exportar dados</p>
-                                    </div>
-                                </div>
-                                <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                                    Gere um arquivo SQL contendo todos os dados atuais do banco de dados (Alunos, Devices, Empréstimos, Usuários).
-                                    Recomendado fazer semanalmente para segurança.
-                                </p>
-                                <a
-                                    href="/api/system/backup"
-                                    target="_blank"
-                                    className="flex items-center justify-center w-full px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-blue-300 hover:text-blue-600 transition-all font-medium group"
-                                >
-                                    <Download className="w-5 h-5 mr-2 group-hover:animate-bounce" />
-                                    Baixar Backup (.sql)
-                                </a>
-                            </div>
-
-                            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-                                        <RefreshCw className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-800">Restaurar Dados</h3>
-                                        <p className="text-sm text-gray-500">Importar dados</p>
-                                    </div>
-                                </div>
-                                <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 mb-6 flex gap-3">
-                                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                                    <p className="text-xs text-amber-800 font-medium">
-                                        Atenção: A restauração substituirá todos os dados atuais. Certifique-se de ter um backup recente antes de prosseguir.
+                                    <p className="text-slate-500 font-medium mb-12 leading-relaxed text-lg">
+                                        Uma snapshot integral do ecossistema Apple Academy. Contém registros de estudantes, inventário histórico e configurações de usuários.
                                     </p>
+                                    <a
+                                        href="/api/system/backup"
+                                        target="_blank"
+                                        className="flex items-center justify-center w-full px-8 py-6 bg-slate-900 text-white rounded-3xl hover:bg-black transition-all font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 group/btn"
+                                    >
+                                        <Download className="w-5 h-5 mr-3 group-hover/btn:translate-y-1 transition-transform" />
+                                        Consolidar Backup (.sql)
+                                    </a>
                                 </div>
-                                <button
-                                    onClick={() => document.getElementById('restorefs').click()}
-                                    className="flex items-center justify-center w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all font-medium shadow-lg shadow-amber-500/20"
-                                >
-                                    <Upload className="w-5 h-5 mr-2" />
-                                    Selecionar Arquivo Restore
-                                </button>
-                                <input
-                                    type="file"
-                                    id="restorefs"
-                                    className="hidden"
-                                    accept=".sql"
-                                    onChange={async (e) => {
-                                        const file = e.target.files[0];
-                                        if (!file) return;
 
-                                        if (!confirm("Tem certeza? Isso irá modificar o banco de dados!")) {
+                                <div className="bg-white p-12 rounded-[3rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-500 group">
+                                    <div className="flex items-center gap-6 mb-10">
+                                        <div className="p-6 bg-rose-50 text-rose-600 rounded-[2rem] group-hover:bg-rose-600 group-hover:text-white transition-colors duration-500 shadow-lg shadow-rose-100">
+                                            <RefreshCw size={40} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Restauração Crítica</h3>
+                                            <p className="text-slate-400 font-bold text-sm tracking-tight uppercase">Recuperação de desastres</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 bg-rose-50/50 rounded-3xl border border-rose-100/50 mb-10 flex gap-4 items-center">
+                                        <AlertTriangle className="w-8 h-8 text-rose-500 flex-shrink-0 animate-pulse" />
+                                        <p className="text-xs text-rose-800 font-black uppercase tracking-wider leading-relaxed">
+                                            Alerta: Este processo é destrutivo e substituirá o banco de dados atual instantaneamente.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => document.getElementById('restorefs').click()}
+                                        className="flex items-center justify-center w-full px-8 py-6 bg-white border-2 border-slate-900 text-slate-900 rounded-3xl hover:bg-slate-900 hover:text-white transition-all font-black text-xs uppercase tracking-[0.2em]"
+                                    >
+                                        <Upload className="w-5 h-5 mr-3" />
+                                        Carregar Snapshot SQL
+                                    </button>
+                                    <input
+                                        type="file"
+                                        id="restorefs"
+                                        className="hidden"
+                                        accept=".sql"
+                                        onChange={async (e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+
+                                            if (!confirm("CONFIRMAÇÃO DE SEGURANÇA: Deseja realmente sobrescrever todos os dados do sistema?")) {
+                                                e.target.value = '';
+                                                return;
+                                            }
+
+                                            const formData = new FormData();
+                                            formData.append('file', file);
+
+                                            try {
+                                                alert("OPERACÃO INICIADA: Não feche esta janela...");
+                                                const res = await fetch('/api/system/restore', {
+                                                    method: 'POST',
+                                                    body: formData
+                                                });
+                                                const data = await res.json();
+                                                alert(data.message);
+                                                if (data.success) window.location.reload();
+                                            } catch (err) {
+                                                alert("FALHA NA OPERAÇÃO: " + err);
+                                            }
                                             e.target.value = '';
-                                            return;
-                                        }
-
-                                        const formData = new FormData();
-                                        formData.append('file', file);
-
-                                        try {
-                                            alert("Iniciando restauração... Aguarde o aviso de conclusão.");
-                                            const res = await fetch('/api/system/restore', {
-                                                method: 'POST',
-                                                body: formData
-                                            });
-                                            const data = await res.json();
-                                            alert(data.message);
-                                            if (data.success) window.location.reload();
-                                        } catch (err) {
-                                            alert("Erro ao restaurar: " + err);
-                                        }
-                                        e.target.value = '';
-                                    }}
-                                />
+                                        }}
+                                    />
+                                </div>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Modals */}
+            {/* Premium Modals */}
             <UserModal
                 isOpen={isUserModalOpen}
                 onClose={() => setIsUserModalOpen(false)}

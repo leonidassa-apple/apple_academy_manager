@@ -184,41 +184,99 @@ export default function Agenda() {
     };
 
     return (
-        <div className="space-y-8 animate-fade-in-up">
+        <div className="p-6 max-w-[1600px] mx-auto animate-in fade-in duration-700">
+            {/* Premium Header Segment */}
+            <div className="bg-white rounded-[2rem] p-8 mb-8 shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-50/50 rounded-full -mr-48 -mt-48 blur-3xl"></div>
 
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
-                        <Calendar className="w-8 h-8 text-blue-600" />
-                        Agenda Acadêmica
-                    </h1>
-                    <p className="text-gray-500 mt-1">Gerencie eventos, aulas e compromissos importantes</p>
+                <div className="relative z-10 flex items-center gap-6">
+                    <div className="p-4 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl shadow-xl shadow-indigo-200">
+                        <Calendar size={36} className="text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">Agenda Acadêmica</h1>
+                        <div className="flex items-center gap-2 mt-1 text-slate-500 font-medium">
+                            <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                            Sincronização de eventos e marcos
+                        </div>
+                    </div>
                 </div>
-                <div>
+
+                <div className="relative z-10">
                     <button
                         onClick={() => {
                             resetForm();
                             setIsModalOpen(true);
                         }}
-                        className="flex items-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all duration-200 font-medium shadow-lg shadow-blue-500/30 active:scale-95 hover:shadow-xl group"
+                        className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-violet-700 text-white rounded-2xl hover:from-indigo-700 hover:to-violet-800 transition-all font-black text-sm shadow-xl shadow-indigo-200 active:scale-95 group"
                     >
-                        <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-                        Novo Evento
+                        <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                        Novo Compromisso
                     </button>
                 </div>
             </div>
 
-            {/* Calendar Container */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 overflow-hidden">
+            {/* Quick Insights Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all group/card">
+                    <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl group-hover/card:bg-indigo-600 group-hover/card:text-white transition-colors duration-300">
+                        <Calendar size={28} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Eventos</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">{events.length}</p>
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all group/card">
+                    <div className="p-4 bg-rose-50 text-rose-600 rounded-2xl group-hover/card:bg-rose-600 group-hover/card:text-white transition-colors duration-300">
+                        <Clock size={28} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Hoje</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">
+                            {events.filter(e => new Date(e.start).toDateString() === new Date().toDateString()).length}
+                        </p>
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all group/card">
+                    <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl group-hover/card:bg-emerald-600 group-hover/card:text-white transition-colors duration-300">
+                        <MapPin size={28} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Locais Ativos</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">
+                            {new Set(events.map(e => e.extendedProps.local).filter(Boolean)).size}
+                        </p>
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all group/card">
+                    <div className="p-4 bg-amber-50 text-amber-600 rounded-2xl group-hover/card:bg-amber-600 group-hover/card:text-white transition-colors duration-300">
+                        <Tag size={28} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Categorias</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">
+                            {new Set(events.map(e => e.extendedProps.tipo).filter(Boolean)).size || 1}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Calendar Premium Container */}
+            <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-8 overflow-hidden transform-gpu">
                 <style>{`
-                    .fc-toolbar-title { font-size: 1.25rem !important; font-weight: 600 !important; color: #1f2937 !important; }
-                    .fc-button-primary { background-color: #3b82f6 !important; border-color: #3b82f6 !important; text-transform: capitalize !important; }
-                    .fc-button-active { background-color: #2563eb !important; border-color: #2563eb !important; }
-                    .fc-today-button { background-color: #fff !important; color: #374151 !important; border-color: #d1d5db !important; font-weight: 500 !important; }
-                    .fc-event { border-radius: 4px !important; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; border: none !important; }
-                    .fc-daygrid-day-number { color: #4b5563 !important; font-weight: 500 !important; }
-                    .fc-col-header-cell-cushion { color: #6b7280 !important; font-weight: 600 !important; text-transform: uppercase !important; font-size: 0.85rem !important; padding-top: 10px !important; padding-bottom: 10px !important; }
+                    .fc-toolbar-title { font-size: 1.5rem !important; font-weight: 900 !important; color: #0f172a !important; text-transform: capitalize !important; letter-spacing: -0.02em !important; }
+                    .fc-button-primary { background: #ffffff !important; border: 1px solid #e2e8f0 !important; color: #64748b !important; padding: 10px 18px !important; font-weight: 800 !important; text-transform: uppercase !important; font-size: 11px !important; letter-spacing: 0.1em !important; border-radius: 14px !important; transition: all 0.2s !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; }
+                    .fc-button-primary:hover { background: #f8fafc !important; color: #0f172a !important; border-color: #cbd5e1 !important; transform: translateY(-1px) !important; }
+                    .fc-button-active { background: #4f46e5 !important; color: #ffffff !important; border-color: #4f46e5 !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2) !important; }
+                    .fc-today-button { opacity: 1 !important; }
+                    .fc-event { border-radius: 12px !important; padding: 4px 8px !important; font-weight: 700 !important; font-size: 11px !important; border: none !important; margin: 2px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; transition: transform 0.2s !important; }
+                    .fc-event:hover { transform: scale(1.02) !important; z-index: 50 !important; }
+                    .fc-daygrid-day-number { color: #64748b !important; font-weight: 900 !important; padding: 10px !important; font-size: 13px !important; }
+                    .fc-col-header-cell-cushion { color: #94a3b8 !important; font-weight: 900 !important; text-transform: uppercase !important; font-size: 10px !important; letter-spacing: 0.15em !important; padding: 15px 0 !important; }
+                    .fc-day-today { background-color: rgba(79, 70, 229, 0.03) !important; }
+                    .fc-theme-standard td, .fc-theme-standard th { border: 1px solid #f1f5f9 !important; }
+                    .fc-theme-standard .fc-scrollgrid { border: none !important; }
                 `}</style>
                 <FullCalendar
                     ref={calendarRef}
@@ -231,11 +289,11 @@ export default function Agenda() {
                         right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
                     }}
                     buttonText={{
-                        today: 'Hoje',
-                        month: 'Mês',
-                        week: 'Semana',
-                        day: 'Dia',
-                        list: 'Lista'
+                        today: 'hoje',
+                        month: 'mês',
+                        week: 'semana',
+                        day: 'dia',
+                        list: 'lista'
                     }}
                     events={events}
                     editable={true}
@@ -251,181 +309,178 @@ export default function Agenda() {
                 />
             </div>
 
-            {/* Modal */}
+            {/* Overhauled Event Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                    {/* Backdrop */}
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setIsModalOpen(false)}></div>
+                <div className="fixed inset-0 z-[100] overflow-y-auto">
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsModalOpen(false)}></div>
 
-                    <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
-                        <div className="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-gray-100">
+                    <div className="flex min-h-screen items-center justify-center p-6">
+                        <div className="relative transform overflow-hidden rounded-[2.5rem] bg-white text-left shadow-2xl transition-all sm:w-full sm:max-w-2xl border border-slate-100 flex flex-col">
 
-                            {/* Header */}
-                            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-5 flex justify-between items-center">
-                                <div className="flex items-center space-x-3">
-                                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-md">
-                                        <Calendar className="w-6 h-6 text-white" />
+                            {/* Modal Header */}
+                            <div className="bg-gradient-to-r from-indigo-600 to-violet-700 p-8 flex justify-between items-center relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                <div className="relative z-10 flex items-center gap-5">
+                                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-lg">
+                                        <Calendar className="w-8 h-8 text-white" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold leading-6 text-white">{selectedEvent ? 'Editar Evento' : 'Novo Evento'}</h3>
-                                        <p className="text-blue-100 text-sm mt-0.5">Detalhes do compromisso</p>
+                                        <h3 className="text-2xl font-black text-white leading-tight">
+                                            {selectedEvent ? 'Agenda Academy' : 'Agendar Novo Evento'}
+                                        </h3>
+                                        <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-0.5">
+                                            {selectedEvent ? 'Sincronizando compromisso' : 'Planejando cronograma'}
+                                        </p>
                                     </div>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} className="text-blue-100 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-full">
+                                <button onClick={() => setIsModalOpen(false)} className="relative z-10 p-2 text-white/60 hover:text-white bg-black/10 hover:bg-black/20 rounded-full transition-all">
                                     <X className="w-6 h-6" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="md:col-span-2 space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1">Título do Evento</label>
+                            <form onSubmit={handleSubmit} className="p-10 space-y-8 bg-slate-50/20">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Evento</label>
                                         <input
                                             type="text"
                                             required
                                             value={formData.titulo}
                                             onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                                            className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
-                                            placeholder="Ex: Reunião de Planejamento"
+                                            className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-slate-700 font-bold placeholder:text-slate-300 shadow-sm"
+                                            placeholder="Ex: Aula Magna - UX Design"
                                         />
                                     </div>
 
-                                    <div className="md:col-span-2 space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
-                                            <AlignLeft className="w-4 h-4 mr-1.5 text-gray-400" />
-                                            Descrição
+                                    <div className="md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <AlignLeft size={14} className="text-slate-300" />
+                                            Descrição e Detalhes
                                         </label>
                                         <textarea
                                             rows={3}
                                             value={formData.descricao}
                                             onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                                            className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm resize-none"
-                                            placeholder="Detalhes adicionais sobre o evento..."
+                                            className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-slate-700 font-bold placeholder:text-slate-300 shadow-sm resize-none"
+                                            placeholder="Informações relevantes para os participantes..."
                                         />
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
-                                            <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                                            Início
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <Clock size={14} className="text-slate-300" />
+                                            Início do Compromisso
                                         </label>
                                         <input
                                             type="datetime-local"
                                             required
                                             value={formData.data_inicio}
                                             onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
-                                            className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+                                            className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-slate-700 font-bold shadow-sm"
                                         />
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
-                                            <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                                            Fim
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <Clock size={14} className="text-slate-300" />
+                                            Previsão de Término
                                         </label>
                                         <input
                                             type="datetime-local"
                                             required
                                             value={formData.data_fim}
                                             onChange={(e) => setFormData({ ...formData, data_fim: e.target.value })}
-                                            className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+                                            className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-slate-700 font-bold shadow-sm"
                                         />
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
-                                            <MapPin className="w-4 h-4 mr-1.5 text-gray-400" />
-                                            Local
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <MapPin size={14} className="text-slate-300" />
+                                            Localização Física
                                         </label>
                                         <input
                                             type="text"
                                             value={formData.local}
                                             onChange={(e) => setFormData({ ...formData, local: e.target.value })}
-                                            className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
-                                            placeholder="Ex: Auditório"
+                                            className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-slate-700 font-bold placeholder:text-slate-300 shadow-sm"
+                                            placeholder="Ex: Sala de Inovação"
                                         />
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
-                                            <Tag className="w-4 h-4 mr-1.5 text-gray-400" />
-                                            Tipo
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <Tag size={14} className="text-slate-300" />
+                                            Categoria Acadêmica
                                         </label>
-                                        <div className="relative">
-                                            <select
-                                                value={formData.tipo}
-                                                onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                                                className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm appearance-none"
-                                            >
-                                                <option value="">Selecione...</option>
-                                                <option value="Reunião">Reunião</option>
-                                                <option value="Aula">Aula</option>
-                                                <option value="Workshop">Workshop</option>
-                                                <option value="Apresentação">Apresentação</option>
-                                                <option value="Evento">Evento</option>
-                                                <option value="Outro">Outro</option>
-                                            </select>
-                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                                                <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
-                                            </div>
-                                        </div>
+                                        <select
+                                            value={formData.tipo}
+                                            onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                                            className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-slate-700 font-bold shadow-sm appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Selecione o tipo...</option>
+                                            <option value="Reunião">Reunião</option>
+                                            <option value="Aula">Aula</option>
+                                            <option value="Workshop">Workshop</option>
+                                            <option value="Apresentação">Apresentação</option>
+                                            <option value="Evento">Evento Acadêmico</option>
+                                            <option value="Outro">Outro</option>
+                                        </select>
                                     </div>
 
-                                    <div className="md:col-span-2 space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
-                                            <Users className="w-4 h-4 mr-1.5 text-gray-400" />
-                                            Participantes
+                                    <div className="md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <Users size={14} className="text-slate-300" />
+                                            Grupo de Participantes
                                         </label>
                                         <input
                                             type="text"
                                             value={formData.participantes}
                                             onChange={(e) => setFormData({ ...formData, participantes: e.target.value })}
-                                            className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
-                                            placeholder="Nomes separados por vírgula"
+                                            className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-slate-700 font-bold placeholder:text-slate-300 shadow-sm"
+                                            placeholder="Ex: Estudantes, Mentores, Staff..."
                                         />
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="block text-sm font-semibold text-gray-700 ml-1">Cor do Evento</label>
-                                        <div className="flex items-center space-x-2">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identidade Visual</label>
+                                        <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                                             <input
                                                 type="color"
                                                 value={formData.cor}
                                                 onChange={(e) => setFormData({ ...formData, cor: e.target.value })}
-                                                className="h-10 w-20 overflow-hidden rounded-lg border border-gray-200 p-1 cursor-pointer"
+                                                className="h-10 w-20 overflow-hidden rounded-xl border-none cursor-pointer"
                                             />
-                                            <span className="text-sm text-gray-500">{formData.cor}</span>
+                                            <span className="text-xs font-black text-slate-400 font-mono tracking-widest">{formData.cor.toUpperCase()}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-                                    <div>
-                                        {selectedEvent && (
-                                            <button
-                                                type="button"
-                                                onClick={handleDelete}
-                                                className="flex items-center text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors text-sm font-medium"
-                                            >
-                                                <Trash2 className="w-4 h-4 mr-1.5" />
-                                                Excluir Evento
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="flex gap-3">
+                                <div className="flex justify-between items-center pt-8 border-t border-slate-100">
+                                    {selectedEvent ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleDelete}
+                                            className="flex items-center gap-2 px-6 py-3 text-rose-500 hover:bg-rose-50 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                                        >
+                                            <Trash2 size={16} />
+                                            Remover Registro
+                                        </button>
+                                    ) : <div></div>}
+                                    <div className="flex gap-4">
                                         <button
                                             type="button"
                                             onClick={() => setIsModalOpen(false)}
-                                            className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm"
+                                            className="px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-50 transition-all font-black text-xs uppercase tracking-widest"
                                         >
                                             Cancelar
                                         </button>
                                         <button
                                             type="submit"
-                                            className="flex items-center px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-300 transition-all shadow-md hover:shadow-lg transform active:scale-95"
+                                            className="flex items-center gap-2 px-10 py-4 bg-gradient-to-r from-indigo-600 to-violet-700 text-white rounded-2xl hover:from-indigo-700 hover:to-violet-800 transition-all font-black text-sm shadow-xl shadow-indigo-100 active:scale-95 group"
                                         >
-                                            <Save className="w-4 h-4 mr-2" />
-                                            Salvar
+                                            <Save size={20} className="group-hover:scale-110 transition-transform" />
+                                            Salvar Alterações
                                         </button>
                                     </div>
                                 </div>

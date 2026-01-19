@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, QrCode, PenTool, User, Smartphone, Package, Calendar, Save, Scan } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { X, QrCode, PenTool, User, Smartphone, Package, Calendar, Save, Scan, Search, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 import SignatureCanvas from 'react-signature-canvas';
 
 export default function LoanModal({ isOpen, onClose, onSuccess }) {
     const [students, setStudents] = useState([]);
+    const [filteredStudents, setFilteredStudents] = useState([]);
+    const [studentSearch, setStudentSearch] = useState('');
+    const [showStudentsDropdown, setShowStudentsDropdown] = useState(false);
+
     const [devices, setDevices] = useState([]);
     const [formData, setFormData] = useState({
         aluno_id: '',
@@ -16,6 +20,7 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
     });
     const [scanning, setScanning] = useState(false);
     const sigCanvas = useRef({});
+    const dropdownRef = useRef(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -24,11 +29,41 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
                 fetch('/api/alunos/lista').then(res => res.json()),
                 fetch('/api/devices').then(res => res.json())
             ]).then(([studentsData, devicesData]) => {
-                if (studentsData.success) setStudents(studentsData.data);
+                if (studentsData.success) {
+                    setStudents(studentsData.data);
+                    setFilteredStudents(studentsData.data);
+                }
                 if (Array.isArray(devicesData)) setDevices(devicesData);
             }).catch(err => console.error("Error loading resources:", err));
+
+            setStudentSearch('');
+            setShowStudentsDropdown(false);
         }
     }, [isOpen]);
+
+    // Handle clicks outside dropdown to close it
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowStudentsDropdown(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        const result = students.filter(s =>
+            s.nome?.toLowerCase().includes(studentSearch.toLowerCase())
+        );
+        setFilteredStudents(result);
+    }, [studentSearch, students]);
+
+    const handleSelectStudent = (student) => {
+        setFormData(prev => ({ ...prev, aluno_id: student.id }));
+        setStudentSearch(student.nome);
+        setShowStudentsDropdown(false);
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -40,47 +75,83 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
     };
 
     useEffect(() => {
-        let scanner = null;
-        if (scanning) {
-            const timer = setTimeout(() => {
+        let html5QrCode = null;
+
+        async function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
                 try {
-                    scanner = new Html5QrcodeScanner(
-                        "reader",
-                        { fps: 10, qrbox: { width: 250, height: 250 } },
-                        false
-                    );
-
-                    scanner.render((decodedText) => {
-                        const foundDevice = devices.find(d => d.numero_serie === decodedText);
-
-                        if (foundDevice) {
-                            setFormData(prev => ({ ...prev, device_id: foundDevice.id }));
-                            // Play a success sound or vibrate if possible
-                            if (navigator.vibrate) navigator.vibrate(200);
-                            scanner.clear().then(() => setScanning(false));
-                        } else {
-                            alert(`Device com serial ${decodedText} não encontrado ou indisponível.`);
-                        }
-                    }, (error) => {
-                        // ignore failures during scan
-                    });
+                    await html5QrCode.stop();
                 } catch (e) {
-                    console.error("Scanner init error", e);
-                    setScanning(false);
+                    console.error("Erro ao parar scanner:", e);
                 }
-            }, 100);
+            }
+        }
 
-            return () => {
-                clearTimeout(timer);
-                if (scanner) {
-                    scanner.clear().catch(e => console.error("Failed to clear scanner", e));
+        if (scanning && isOpen) {
+            const startScanner = async () => {
+                try {
+                    html5QrCode = new Html5Qrcode("reader");
+                    const config = {
+                        fps: 15,
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0
+                    };
+
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        config,
+                        (decodedText) => {
+                            const foundDevice = devices.find(d => d.numero_serie === decodedText);
+
+                            if (foundDevice) {
+                                setFormData(prev => ({ ...prev, device_id: foundDevice.id }));
+                                if (navigator.vibrate) navigator.vibrate(200);
+                                stopScanner().then(() => setScanning(false));
+                            } else {
+                                alert(`Device com serial ${decodedText} não encontrado ou indisponível.`);
+                            }
+                        }
+                    );
+                } catch (err) {
+                    console.error("Erro ao iniciar câmera:", err);
+                    try {
+                        await html5QrCode.start({ facingMode: "user" }, { fps: 15, qrbox: { width: 250, height: 250 } }, (decodedText) => {
+                            const foundDevice = devices.find(d => d.numero_serie === decodedText);
+                            if (foundDevice) {
+                                setFormData(prev => ({ ...prev, device_id: foundDevice.id }));
+                                stopScanner().then(() => setScanning(false));
+                            } else {
+                                alert(`Device com serial ${decodedText} não encontrado ou indisponível.`);
+                            }
+                        });
+                    } catch (err2) {
+                        console.error("Falha total na câmera:", err2);
+                        alert("Não foi possível acessar a câmera. Verifique as permissões.");
+                        setScanning(false);
+                    }
                 }
             };
+
+            const timer = setTimeout(startScanner, 300);
+            return () => {
+                clearTimeout(timer);
+                stopScanner();
+            };
         }
-    }, [scanning, devices]);
+    }, [scanning, devices, isOpen]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.aluno_id) {
+            alert("Selecione um aluno da lista.");
+            return;
+        }
+
+        if (!formData.device_id) {
+            alert("Selecione um device da lista.");
+            return;
+        }
 
         if (sigCanvas.current.isEmpty()) {
             alert("A assinatura do aluno é obrigatória.");
@@ -89,7 +160,7 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
 
         setLoading(true);
 
-        const signatureData = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
+        const signatureData = sigCanvas.current.getCanvas().toDataURL('image/png');
 
         const payload = {
             ...formData,
@@ -122,7 +193,6 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            {/* Backdrop */}
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
 
             <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
@@ -146,29 +216,62 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
 
                     <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
 
-                        {/* Student & Device Selection */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                            {/* Student Select */}
-                            <div className="space-y-1.5">
-                                <label className="block text-sm font-semibold text-gray-700 ml-1">Aluno Responsável</label>
-                                <div className="relative">
+                            {/* Student Search Selector */}
+                            <div className="md:col-span-1 space-y-1.5 relative" ref={dropdownRef}>
+                                <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
+                                    <User className="w-4 h-4 mr-1.5 text-gray-400" />
+                                    Aluno Responsável
+                                </label>
+                                <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <User className="h-5 w-5 text-gray-400" />
+                                        <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                                     </div>
-                                    <select
-                                        name="aluno_id"
-                                        value={formData.aluno_id}
-                                        onChange={handleChange}
-                                        className="block w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm appearance-none"
-                                        required
-                                    >
-                                        <option value="">Selecione o aluno...</option>
-                                        {students.map(s => (
-                                            <option key={s.id} value={s.id}>{s.nome}</option>
-                                        ))}
-                                    </select>
+                                    <input
+                                        type="text"
+                                        placeholder="Pesquise o nome do aluno..."
+                                        value={studentSearch}
+                                        onChange={(e) => {
+                                            setStudentSearch(e.target.value);
+                                            setShowStudentsDropdown(true);
+                                            if (e.target.value === '') setFormData(prev => ({ ...prev, aluno_id: '' }));
+                                        }}
+                                        onFocus={() => setShowStudentsDropdown(true)}
+                                        className={`block w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm ${formData.aluno_id ? 'border-green-200 bg-green-50/30' : ''}`}
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                        <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showStudentsDropdown ? 'rotate-180' : ''}`} />
+                                    </div>
                                 </div>
+
+                                {showStudentsDropdown && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-fade-in-down">
+                                        {filteredStudents.length > 0 ? (
+                                            filteredStudents.map(s => (
+                                                <button
+                                                    key={s.id}
+                                                    type="button"
+                                                    onClick={() => handleSelectStudent(s)}
+                                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center justify-between group transition-colors border-b border-gray-50 last:border-none"
+                                                >
+                                                    <div>
+                                                        <div className="font-semibold text-gray-800">{s.nome}</div>
+                                                        <div className="text-xs text-gray-500">ID: {s.id}</div>
+                                                    </div>
+                                                    {formData.aluno_id === s.id && (
+                                                        <CheckCircle className="w-5 h-5 text-green-500" />
+                                                    )}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-8 text-center text-gray-500 flex flex-col items-center">
+                                                <AlertCircle className="w-8 h-8 mb-2 text-gray-300" />
+                                                <p className="font-medium">Nenhum aluno encontrado</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Device Select */}

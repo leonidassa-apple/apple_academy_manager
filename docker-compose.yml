@@ -16,6 +16,7 @@ services:
       - "5001:5001"
     volumes:
       - ./uploads:/app/uploads
+      - ./backend:/app/backend
   #    depends_on:
   #      - db
 

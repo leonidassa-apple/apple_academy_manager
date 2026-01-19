@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, User, Barcode, Calendar, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Save, User, Barcode, Calendar, FileText, CheckCircle, AlertCircle, Search, ChevronDown } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
     const [loading, setLoading] = useState(false);
     const [alunos, setAlunos] = useState([]);
+    const [filteredAlunos, setFilteredAlunos] = useState([]);
+    const [alunoSearch, setAlunoSearch] = useState('');
+    const [showAlunosDropdown, setShowAlunosDropdown] = useState(false);
+    const [selectedAlunoName, setSelectedAlunoName] = useState('');
+
     const [scanning, setScanning] = useState(false);
     const [formData, setFormData] = useState({
         aluno_id: '',
@@ -15,66 +20,112 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
     });
 
     const sigCanvas = useRef({});
+    const dropdownRef = useRef(null);
 
     useEffect(() => {
         if (isOpen) {
             fetchAlunos();
             setFormData(prev => ({ ...prev, data_retirada: new Date().toISOString().split('T')[0] }));
             setScanning(false);
+            setAlunoSearch('');
+            setSelectedAlunoName('');
+            setShowAlunosDropdown(false);
         }
     }, [isOpen]);
 
-    // Cleanup scanner when modal closes
+    // Handle clicks outside dropdown to close it
     useEffect(() => {
-        if (!isOpen) {
-            setScanning(false);
-            // If we had a way to manually clear the scanner instance here we would, 
-            // but the useEffect below handles the `scanning` state toggle.
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowAlunosDropdown(false);
+            }
         }
-    }, [isOpen]);
-
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const fetchAlunos = async () => {
         try {
             const res = await fetch('/api/alunos/lista');
             const data = await res.json();
-            if (data.success) setAlunos(data.data);
+            if (data.success) {
+                setAlunos(data.data);
+                setFilteredAlunos(data.data);
+            } else {
+                console.error('Erro na API de alunos:', data.message);
+            }
         } catch (error) {
             console.error('Erro ao buscar alunos:', error);
         }
     };
 
-    // Scanner Logic
     useEffect(() => {
-        let scanner = null;
-        if (scanning && isOpen) {
-            // Slight delay to ensure DOM is ready
-            const timer = setTimeout(() => {
+        const result = alunos.filter(aluno =>
+            aluno.nome.toLowerCase().includes(alunoSearch.toLowerCase())
+        );
+        setFilteredAlunos(result);
+    }, [alunoSearch, alunos]);
+
+    const handleSelectAluno = (aluno) => {
+        setFormData(prev => ({ ...prev, aluno_id: aluno.id }));
+        setSelectedAlunoName(aluno.nome);
+        setAlunoSearch(aluno.nome);
+        setShowAlunosDropdown(false);
+    };
+
+    // Scanner Logic using Html5Qrcode
+    useEffect(() => {
+        let html5QrCode = null;
+
+        async function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
                 try {
-                    scanner = new Html5QrcodeScanner(
-                        "reader-book",
-                        { fps: 10, qrbox: { width: 250, height: 150 } }, // Rectangular box for barcodes
-                        false
-                    );
-
-                    scanner.render((decodedText) => {
-                        setFormData(prev => ({ ...prev, codigo_barras: decodedText }));
-                        if (navigator.vibrate) navigator.vibrate(200);
-                        scanner.clear().then(() => setScanning(false));
-                    }, (error) => {
-                        // ignore scan errors
-                    });
+                    await html5QrCode.stop();
                 } catch (e) {
-                    console.error("Scanner init error", e);
-                    setScanning(false);
+                    console.error("Erro ao parar scanner:", e);
                 }
-            }, 100);
+            }
+        }
 
+        if (scanning && isOpen) {
+            const startScanner = async () => {
+                try {
+                    html5QrCode = new Html5Qrcode("reader-book");
+                    const config = {
+                        fps: 15,
+                        qrbox: { width: 300, height: 180 },
+                        aspectRatio: 1.0
+                    };
+
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        config,
+                        (decodedText) => {
+                            setFormData(prev => ({ ...prev, codigo_barras: decodedText }));
+                            if (navigator.vibrate) navigator.vibrate(200);
+                            stopScanner().then(() => setScanning(false));
+                        }
+                    );
+                } catch (err) {
+                    console.error("Erro ao iniciar câmera:", err);
+                    try {
+                        // Fallback to any camera
+                        await html5QrCode.start({ facingMode: "user" }, { fps: 15, qrbox: { width: 300, height: 180 } }, (decodedText) => {
+                            setFormData(prev => ({ ...prev, codigo_barras: decodedText }));
+                            stopScanner().then(() => setScanning(false));
+                        });
+                    } catch (err2) {
+                        console.error("Falha total na câmera:", err2);
+                        alert("Não foi possível acessar a câmera. Verifique as permissões.");
+                        setScanning(false);
+                    }
+                }
+            };
+
+            const timer = setTimeout(startScanner, 300);
             return () => {
                 clearTimeout(timer);
-                if (scanner) {
-                    scanner.clear().catch(e => console.error("Failed to clear scanner", e));
-                }
+                stopScanner();
             };
         }
     }, [scanning, isOpen]);
@@ -86,6 +137,11 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (!formData.aluno_id) {
+            alert("Selecione um aluno da lista.");
+            return;
+        }
+
         if (sigCanvas.current.isEmpty()) {
             alert("A assinatura do aluno é obrigatória.");
             return;
@@ -93,20 +149,31 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
 
         setLoading(true);
 
-        const signatureData = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
+        const signatureData = sigCanvas.current.getCanvas().toDataURL('image/png');
 
         const payload = {
             ...formData,
             assinatura: signatureData
         };
 
+        console.log("Submitting loan with payload keys:", Object.keys(payload));
+
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
             const res = await fetch('/api/emprestimos-livros', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
+            console.log("Response status:", res.status);
             const data = await res.json();
+            console.log("Response data:", data);
 
             if (data.success) {
                 onSuccess();
@@ -116,7 +183,11 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
             }
         } catch (error) {
             console.error('Submit error:', error);
-            alert('Erro ao enviar formulário');
+            if (error.name === 'AbortError') {
+                alert('A requisição demorou muito tempo. Verifique sua conexão ou se o servidor está respondendo.');
+            } else {
+                alert(`Erro ao enviar formulário: ${error.message}`);
+            }
         } finally {
             setLoading(false);
         }
@@ -149,34 +220,66 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
 
                     <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
 
-                        {/* Grid System */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                            {/* Aluno Selection */}
-                            <div className="md:col-span-2 space-y-1.5">
+                            {/* Aluno Search Selector */}
+                            <div className="md:col-span-2 space-y-1.5 relative" ref={dropdownRef}>
                                 <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
                                     <User className="w-4 h-4 mr-1.5 text-gray-400" />
                                     Aluno
                                 </label>
-                                <div className="relative">
-                                    <select
-                                        value={formData.aluno_id}
-                                        onChange={(e) => setFormData({ ...formData, aluno_id: e.target.value })}
-                                        required
-                                        className="block w-full pl-4 pr-10 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm appearance-none"
-                                    >
-                                        <option value="">Selecione o aluno...</option>
-                                        {alunos.map(aluno => (
-                                            <option key={aluno.id} value={aluno.id}>{aluno.nome}</option>
-                                        ))}
-                                    </select>
-                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                                        <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Pesquise o nome do aluno..."
+                                        value={alunoSearch}
+                                        onChange={(e) => {
+                                            setAlunoSearch(e.target.value);
+                                            setShowAlunosDropdown(true);
+                                            if (e.target.value === '') setFormData(prev => ({ ...prev, aluno_id: '' }));
+                                        }}
+                                        onFocus={() => setShowAlunosDropdown(true)}
+                                        className={`block w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm ${formData.aluno_id ? 'border-green-200 bg-green-50/30' : ''}`}
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                        <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showAlunosDropdown ? 'rotate-180' : ''}`} />
                                     </div>
                                 </div>
+
+                                {showAlunosDropdown && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-fade-in-down">
+                                        {filteredAlunos.length > 0 ? (
+                                            filteredAlunos.map(aluno => (
+                                                <button
+                                                    key={aluno.id}
+                                                    type="button"
+                                                    onClick={() => handleSelectAluno(aluno)}
+                                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center justify-between group transition-colors border-b border-gray-50 last:border-none"
+                                                >
+                                                    <div>
+                                                        <div className="font-semibold text-gray-800">{aluno.nome}</div>
+                                                        <div className="text-xs text-gray-500">ID: {aluno.id}</div>
+                                                    </div>
+                                                    {formData.aluno_id === aluno.id && (
+                                                        <CheckCircle className="w-5 h-5 text-green-500" />
+                                                    )}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-8 text-center text-gray-500 flex flex-col items-center">
+                                                <AlertCircle className="w-8 h-8 mb-2 text-gray-300" />
+                                                <p className="font-medium">Nenhum aluno encontrado</p>
+                                                <p className="text-xs mt-1">Verifique o nome ou cadastre o aluno</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Barcode/Book Selection - LEFT COL */}
+                            {/* Barcode Selection */}
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
                                     <Barcode className="w-4 h-4 mr-1.5 text-gray-400" />
@@ -204,7 +307,7 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
                                 </div>
                             </div>
 
-                            {/* Date - RIGHT COL */}
+                            {/* Date */}
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
                                     <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
@@ -263,7 +366,6 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
 
                         </div>
 
-                        {/* Footer Actions */}
                         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
                             <button
                                 type="button"

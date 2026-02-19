@@ -69,7 +69,7 @@ def get_db_cursor(conn):
     if db_type == 'postgres':
         return conn.cursor(cursor_factory=RealDictCursor)
     else:
-        return conn.cursor(dictionary=True)
+        return conn.cursor(dictionary=True, buffered=True)
 
 
 def init_app(app):
@@ -100,7 +100,9 @@ def create_tables():
                          (id {AUTO_INC},
                           username VARCHAR(255) UNIQUE NOT NULL,
                           password VARCHAR(255) NOT NULL,
-                          role VARCHAR(50) NOT NULL)""")
+                          role VARCHAR(50) NOT NULL,
+                          email VARCHAR(255),
+                          foto_path VARCHAR(255))""")
         
         # Tabela de alunos
         cursor.execute(f"""CREATE TABLE IF NOT EXISTS alunos

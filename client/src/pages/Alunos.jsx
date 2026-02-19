@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Search, UserPlus, Filter, Edit, Trash2, Upload, User, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import AlunoModal from '../components/AlunoModal';
 import DataImportModal from '../components/DataImportModal';
 
 export default function Alunos() {
+    const { user: currentUser } = useAuth();
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -141,20 +143,24 @@ export default function Alunos() {
                 </div>
 
                 <div className="relative z-10 flex items-center gap-3">
-                    <button
-                        onClick={handleImport}
-                        className="flex items-center gap-2 px-6 py-4 bg-white border border-slate-200 rounded-2xl text-slate-600 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95"
-                    >
-                        <Upload size={18} className="text-slate-400" />
-                        Importar Base
-                    </button>
-                    <button
-                        onClick={handleCreate}
-                        className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-800 transition-all font-black text-sm shadow-xl shadow-blue-200 active:scale-95 group"
-                    >
-                        <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        Novo Aluno
-                    </button>
+                    {currentUser?.role === 'admin' && (
+                        <>
+                            <button
+                                onClick={handleImport}
+                                className="flex items-center gap-2 px-6 py-4 bg-white border border-slate-200 rounded-2xl text-slate-600 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+                            >
+                                <Upload size={18} className="text-slate-400" />
+                                Importar Base
+                            </button>
+                            <button
+                                onClick={handleCreate}
+                                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-800 transition-all font-black text-sm shadow-xl shadow-blue-200 active:scale-95 group"
+                            >
+                                <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                Novo Aluno
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -249,7 +255,9 @@ export default function Alunos() {
                                 <th className="px-4 py-4 hidden lg:table-cell">Comunicação</th>
                                 <th className="px-4 py-4 hidden sm:table-cell">Trajetória Acadêmica</th>
                                 <th className="px-4 py-4 hidden md:table-cell">Status</th>
-                                <th className="px-6 py-4 text-right">Ações</th>
+                                {currentUser?.role === 'admin' && (
+                                    <th className="px-6 py-4 text-right">Ações</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -331,16 +339,18 @@ export default function Alunos() {
                                                 {student.status_aluno}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => handleEdit(student)} className="p-2.5 bg-white border border-slate-100 hover:border-blue-500 hover:text-blue-600 rounded-xl transition-all shadow-sm">
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button onClick={() => handleDelete(student.id, student.nome)} className="p-2.5 bg-white border border-slate-100 hover:border-rose-500 hover:text-rose-600 rounded-xl transition-all shadow-sm">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
+                                        {currentUser?.role === 'admin' && (
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button onClick={() => handleEdit(student)} className="p-2.5 bg-white border border-slate-100 hover:border-blue-500 hover:text-blue-600 rounded-xl transition-all shadow-sm">
+                                                        <Edit size={16} />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(student.id, student.nome)} className="p-2.5 bg-white border border-slate-100 hover:border-rose-500 hover:text-rose-600 rounded-xl transition-all shadow-sm">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))
                             )}
@@ -427,7 +437,7 @@ export default function Alunos() {
             />
 
             {/* Premium Bulk Actions Bar */}
-            {selectedStudents.length > 0 && (
+            {currentUser?.role === 'admin' && selectedStudents.length > 0 && (
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur-xl text-white px-8 py-5 rounded-[2.5rem] shadow-2xl flex items-center gap-8 z-50 animate-in slide-in-from-bottom-10 duration-500">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-lg shadow-lg">

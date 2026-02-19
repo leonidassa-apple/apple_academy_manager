@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Users, Smartphone, TrendingUp, Activity, ArrowUp, ArrowDown, Package } from 'lucide-react';
+import { Users, Smartphone, TrendingUp, Activity, ArrowUp, ArrowDown, Package, AlertCircle, Book, Calendar, CheckCircle } from 'lucide-react';
+import { useAuth } from './context/AuthContext';
 
 export default function Dashboard() {
+    const { user: currentUser } = useAuth();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -144,14 +146,72 @@ export default function Dashboard() {
                     color="orange"
                 />
                 <MetricCard
-                    title="Crescimento Trimestral"
-                    value={stats.alunos?.foundation_trimestre || 0}
-                    subtitle="Foundation - últimos 3 meses"
-                    icon={TrendingUp}
-                    trend={stats.alunos?.foundation_trimestre > 0 ? "up" : null}
-                    color="purple"
+                    title="Concluídos"
+                    value={stats.concluidos || 0}
+                    subtitle="Total histórico"
+                    icon={CheckCircle}
+                    color="green"
+                />
+                <MetricCard
+                    title="Alertas de Prazo"
+                    value={stats.alertas?.atrasados || 0}
+                    subtitle={`${stats.alertas?.vencendo_hoje || 0} vencendo hoje`}
+                    icon={AlertCircle}
+                    color={stats.alertas?.atrasados > 0 ? "red" : "orange"}
                 />
             </div>
+
+            {/* Loan Alerts Section (New) */}
+            {(stats.alertas?.atrasados > 0 || stats.alertas?.vencendo_hoje > 0 || stats.alertas?.vencendo_breve > 0) && (
+                <div className="bg-white rounded-xl shadow-sm border border-red-100 p-6 mb-8 animate-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-red-50 text-red-600 rounded-lg">
+                                <AlertCircle className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">Monitoramento de Devoluções</h2>
+                                <p className="text-sm text-gray-500">Itens com prazo expirado ou vencendo em breve</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            {stats.alertas?.atrasados > 0 && (
+                                <span className="px-3 py-1 bg-red-500 text-white text-[10px] font-black uppercase rounded-full">
+                                    {stats.alertas.atrasados} Atrasados
+                                </span>
+                            )}
+                            {stats.alertas?.vencendo_hoje > 0 && (
+                                <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-black uppercase rounded-full">
+                                    {stats.alertas.vencendo_hoje} Hoje
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {stats.alertas?.lista?.map((alerta, idx) => (
+                            <div key={idx} className={`p-4 rounded-xl border transition-all hover:shadow-md ${alerta.status === 'Atrasado' ? 'bg-red-50/30 border-red-100' : 'bg-gray-50/50 border-gray-100'}`}>
+                                <div className="flex items-start justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        {alerta.tipo_item === 'Livro' ? <Book className="w-4 h-4 text-purple-600" /> : <Smartphone className="w-4 h-4 text-blue-600" />}
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{alerta.tipo_item}</span>
+                                    </div>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded shadow-sm ${alerta.status === 'Atrasado' ? 'bg-red-500 text-white' : 'bg-orange-100 text-orange-700'}`}>
+                                        {alerta.data_vencimento}
+                                    </span>
+                                </div>
+                                <h3 className="font-bold text-gray-900 text-sm line-clamp-1">{alerta.item_nome}</h3>
+                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100/50">
+                                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold">
+                                        {alerta.aluno_nome?.charAt(0)}
+                                    </div>
+                                    <span className="text-xs text-gray-600 font-medium truncate">{alerta.aluno_nome}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Detailed Analytics Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -208,7 +268,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Recent Activity Section (Placeholder for now) */}
+            {/* Recent Activity Section */}
             {stats.recent_activity && stats.recent_activity.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                     <div className="flex items-center gap-2 mb-4">
@@ -221,7 +281,7 @@ export default function Dashboard() {
                                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                 <div className="flex-1">
                                     <p className="text-sm font-medium text-gray-700">{activity.aluno_nome}</p>
-                                    <p className="text-xs text-gray-500">{activity.device_nome} • {activity.data_retirada}</p>
+                                    <p className="text-xs text-gray-500">{activity.item_nome} • {activity.data_retirada}</p>
                                 </div>
                             </div>
                         ))}

@@ -9,7 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import os
 import shutil
 import pandas as pd
@@ -25,9 +25,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24) # Sessão dura 24h
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hora
-# Ajuste de Cookies para Segurança
+# Ajuste de Cookies para Sessão (Desabilitar Secure enquanto não houver SSL)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production' # True apenas em produção
+app.config['SESSION_COOKIE_SECURE'] = False 
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # Configuração de Logging para Segurança
@@ -94,12 +94,21 @@ def set_csrf_cookie(response):
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    # Mantém o comportamento original para erros HTTP (404, 403, etc)
+    # Log do erro real no servidor
+    app.logger.error(f"Erro: {str(e)}", exc_info=True)
+    
+    # Se for API, sempre retorna JSON
+    if request.path.startswith('/api/'):
+        status_code = e.code if isinstance(e, HTTPException) else 500
+        message = str(e) if isinstance(e, HTTPException) else 'Ocorreu um erro interno de processamento.'
+        return jsonify({
+            'success': False, 
+            'message': message
+        }), status_code
+
+    # Mantém o comportamento original para erros HTTP fora da API (404, 403, etc)
     if isinstance(e, HTTPException):
         return e
-    
-    # Log do erro real no servidor para depuração
-    app.logger.error(f"Erro Crítico: {str(e)}", exc_info=True)
     
     # Retorna mensagem genérica para o usuário final
     return jsonify({
@@ -113,7 +122,12 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # Configuração de Upload
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+if '/backend' in UPLOAD_FOLDER:
+    UPLOAD_FOLDER = UPLOAD_FOLDER.replace('/backend', '')
+# No Docker, o caminho absoluto é /app/uploads
+if os.path.exists('/app/uploads'):
+    UPLOAD_FOLDER = '/app/uploads'
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'csv', 'xlsx'}
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -157,28 +171,7 @@ def upsert_device_from_equipment(conn, equipment_data):
     status = equipment_data.get('status') or 'Disponível'
     para_emprestimo = parse_boolean(equipment_data.get('para_emprestimo'), True)
     
-    # Se não está para empréstimo, remove da tabela devices se existir
-    if not para_emprestimo:
-        cursor = get_db_cursor(conn)
-        try:
-            cursor.execute("DELETE FROM devices WHERE numero_serie = %s", (numero_serie,))
-            conn.commit()
-        finally:
-            cursor.close()
-        return
-    
-    # Só sincroniza se para_emprestimo=true
-    # Sincroniza tanto 'Disponível' quanto 'Emprestado'
-    if status not in ['Disponível', 'Emprestado', 'Reservado']:
-        # Se estiver em manutenção ou outro status, remove do devices para não aparecer na lista de empréstimo
-        cursor = get_db_cursor(conn)
-        try:
-            cursor.execute("DELETE FROM devices WHERE numero_serie = %s", (numero_serie,))
-            conn.commit()
-        finally:
-            cursor.close()
-        return
-    
+    # Definições necessárias para o sync
     nome = equipment_data.get('local') or equipment_data.get('responsavel') or f"{tipo} - {numero_serie}"
     observacao = equipment_data.get('observacao') or ''
     
@@ -188,16 +181,18 @@ def upsert_device_from_equipment(conn, equipment_data):
             extras.append(f"{label}: {equipment_data.get(key)}")
     if extras:
         observacao = f"{observacao} | {' | '.join(extras)}".strip(' |')
-    
+
+    # Se não está para empréstimo, ATUALIZA na tabela devices se existir (não deleta)
     cursor = get_db_cursor(conn)
     try:
         cursor.execute("SELECT id FROM devices WHERE numero_serie = %s", (numero_serie,))
         existing = cursor.fetchone()
         
-        # Ensure para_emprestimo is boolean for Postgres
+        # Ensure para_emprestimo is boolean for Postgres/MySQL consistency
         para_emprestimo_bool = parse_boolean(para_emprestimo, True)
 
         if existing:
+            # Se já existe, atualiza tudo, inclusive se para_emprestimo for false
             cursor.execute('''UPDATE devices SET 
                               tipo = %s,
                               modelo = %s,
@@ -215,7 +210,8 @@ def upsert_device_from_equipment(conn, equipment_data):
                             para_emprestimo_bool,
                             observacao,
                             numero_serie))
-        else:
+        elif para_emprestimo_bool:
+            # Se não existe e está marcado para empréstimo, insere
             cursor.execute('''INSERT INTO devices
                               (tipo, modelo, cor, nome, numero_serie, status, para_emprestimo, observacao)
                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
@@ -227,6 +223,8 @@ def upsert_device_from_equipment(conn, equipment_data):
                             status,
                             para_emprestimo_bool,
                             observacao))
+        # Se não existe e para_emprestimo é false, não faz nada (não cria device desnecessário)
+        
         conn.commit()
     except Exception as e:
         print(f"Erro ao sincronizar device {numero_serie}: {e}")
@@ -329,6 +327,7 @@ def api_me():
     return jsonify({'authenticated': False})
 
 @app.route('/api/login', methods=['POST'])
+@csrf.exempt
 def api_login():
     data = request.get_json()
     if not data:
@@ -396,6 +395,7 @@ def api_login():
             conn.close()
 
 @app.route('/api/logout', methods=['POST'])
+@csrf.exempt
 def api_logout():
     logout_user()
     return jsonify({'success': True, 'message': 'Logged out successfully'})
@@ -471,35 +471,94 @@ def api_dashboard():
         devices_disponiveis = fetch_one("SELECT COUNT(*) as total FROM devices WHERE status = 'Disponível' AND para_emprestimo = TRUE")['total']
         
         # Devices Regular/Foundation
-        # MySQL IN works same.
         devices_regular = fetch_one("SELECT COUNT(*) as total FROM devices WHERE tipo IN ('Macbook', 'Mac Mini') AND para_emprestimo = TRUE")['total']
         devices_foundation = fetch_one("SELECT COUNT(*) as total FROM devices WHERE tipo IN ('iPad', 'iPhone') AND para_emprestimo = TRUE")['total']
         
-        # Emprestimos Recentes
-        # Postgres: LIMIT 5 works.
-        cursor.execute('''SELECT e.data_retirada, a.nome as aluno_nome, d.nome as device_nome, d.tipo as device_tipo 
-                         FROM emprestimos e
-                         JOIN alunos a ON e.aluno_id = a.id
-                         JOIN devices d ON e.device_id = d.id
-                         WHERE e.status = 'Ativo'
-                         ORDER BY e.data_retirada DESC, e.id DESC LIMIT 5''')
+        # Empréstimos Concluídos (Total Histórico)
+        concluidos_devices = fetch_one("SELECT COUNT(*) as total FROM emprestimos WHERE status = 'Finalizado'")['total']
+        concluidos_livros = fetch_one("SELECT COUNT(*) as total FROM emprestimos_livros WHERE status = 'Finalizado'")['total']
+        total_concluidos = concluidos_devices + concluidos_livros
         
-        if os.getenv('DB_TYPE') == 'postgres':
-             rows = cursor.fetchall()
-             emprestimos_recentes = []
-             for r in rows:
-                 emprestimos_recentes.append({
-                     'data_retirada': r[0].strftime('%d/%m/%Y') if r[0] else None,
-                     'aluno_nome': r[1],
-                     'device_nome': r[2],
-                     'device_tipo': r[3]
-                 })
-        else:
-             emprestimos_recentes = cursor.fetchall() # Dict cursor
-             for emp in emprestimos_recentes:
-                   if emp['data_retirada']:
-                        # format logic same as before...
-                        pass
+        # Atividades Recentes (Unificado: Livros + Devices)
+        cursor.execute('''
+            (SELECT e.data_retirada, a.nome as aluno_nome, d.nome as item_nome, d.tipo as item_tipo, 'Device' as categoria
+             FROM emprestimos e
+             JOIN alunos a ON e.aluno_id = a.id
+             JOIN devices d ON e.device_id = d.id
+             WHERE e.status = 'Ativo')
+            UNION ALL
+            (SELECT el.data_retirada, a.nome as aluno_nome, l.titulo as item_nome, 'Livro' as item_tipo, 'Livro' as categoria
+             FROM emprestimos_livros el
+             JOIN alunos a ON el.aluno_id = a.id
+             JOIN exemplares ex ON el.exemplar_id = ex.id
+             JOIN livros l ON ex.livro_id = l.id
+             WHERE el.status IN ('Ativo', 'Atrasado'))
+            ORDER BY data_retirada DESC LIMIT 10
+        ''')
+        
+        raw_recentes = cursor.fetchall()
+        recent_activity = []
+        for r in raw_recentes:
+            item = r if isinstance(r, dict) else {
+                'data_retirada': r[0], 'aluno_nome': r[1], 'item_nome': r[2], 
+                'item_tipo': r[3], 'categoria': r[4]
+            }
+            if item.get('data_retirada') and hasattr(item['data_retirada'], 'strftime'):
+                item['data_retirada'] = item['data_retirada'].strftime('%d/%m/%Y')
+            elif item.get('data_retirada'):
+                item['data_retirada'] = str(item['data_retirada'])
+            recent_activity.append(item)
+
+        # --- ESTATÍSTICAS DE ALERTAS (Devoluções) ---
+        # Itens atrasados (livros e devices)
+        hoje = datetime.now().date()
+        tres_dias = hoje + timedelta(days=3)
+
+        # Atrasados Livros
+        atrasados_livros = fetch_one("SELECT COUNT(*) as total FROM emprestimos_livros WHERE status IN ('Ativo', 'Atrasado') AND data_previsao_devolucao < %s", (hoje,))['total']
+
+        # Vencendo Hoje Livros
+        vencendo_hoje_livros = fetch_one("SELECT COUNT(*) as total FROM emprestimos_livros WHERE status = 'Ativo' AND data_previsao_devolucao = %s", (hoje,))['total']
+
+        # Vencendo em 3 dias Livros
+        vencendo_breve_livros = fetch_one("SELECT COUNT(*) as total FROM emprestimos_livros WHERE status = 'Ativo' AND data_previsao_devolucao > %s AND data_previsao_devolucao <= %s", (hoje, tres_dias))['total']
+
+        # Devices não possuem data_devolucao_prevista explicita em todos os casos, mas a tabela emprestimos tem data_devolucao
+        atrasados_devices = fetch_one("SELECT COUNT(*) as total FROM emprestimos WHERE status = 'Ativo' AND data_devolucao < %s", (hoje,))['total']
+        vencendo_hoje_devices = fetch_one("SELECT COUNT(*) as total FROM emprestimos WHERE status = 'Ativo' AND data_devolucao = %s", (hoje,))['total']
+        vencendo_breve_devices = fetch_one("SELECT COUNT(*) as total FROM emprestimos WHERE status = 'Ativo' AND data_devolucao > %s AND data_devolucao <= %s", (hoje, tres_dias))['total']
+
+        # Lista de Alertas Críticos (Top 5)
+        # Combinar livros e devices mais urgentes
+        cursor.execute('''
+            (SELECT 'Livro' as tipo_item, l.titulo as item_nome, a.nome as aluno_nome, el.data_previsao_devolucao as data_vencimento, el.status
+             FROM emprestimos_livros el
+             JOIN exemplares ex ON el.exemplar_id = ex.id
+             JOIN livros l ON ex.livro_id = l.id
+             JOIN alunos a ON el.aluno_id = a.id
+             WHERE el.status IN ('Ativo', 'Atrasado') AND el.data_previsao_devolucao <= %s)
+            UNION ALL
+            (SELECT 'Device' as tipo_item, d.nome as item_nome, a.nome as aluno_nome, e.data_devolucao as data_vencimento, e.status
+             FROM emprestimos e
+             JOIN devices d ON e.device_id = d.id
+             JOIN alunos a ON e.aluno_id = a.id
+             WHERE e.status = 'Ativo' AND e.data_devolucao <= %s)
+            ORDER BY data_vencimento ASC LIMIT 5
+        ''', (tres_dias, tres_dias))
+        
+        alertas_lista = []
+        rows = cursor.fetchall()
+        for r in rows:
+            # Handle both dict and tuple depending on DB_TYPE (though fetch_one above handled it separately)
+            # In this multi_replace, I'll aim for compatibility or assume RealDictCursor if available
+            item = r if isinstance(r, dict) else {
+                'tipo_item': r[0], 'item_nome': r[1], 'aluno_nome': r[2], 
+                'data_vencimento': r[3].strftime('%d/%m/%Y') if r[3] else None, 
+                'status': r[4]
+            }
+            if isinstance(r, dict) and r['data_vencimento']:
+                 item['data_vencimento'] = r['data_vencimento'].strftime('%d/%m/%Y')
+            alertas_lista.append(item)
 
         # For brevity, returning simplified stats structure
         stats = {
@@ -517,7 +576,14 @@ def api_dashboard():
                 'regular': devices_regular,
                 'foundation': devices_foundation
             },
-            'recentes': emprestimos_recentes
+            'concluidos': total_concluidos,
+            'recent_activity': recent_activity,
+            'alertas': {
+                'atrasados': atrasados_livros + atrasados_devices,
+                'vencendo_hoje': vencendo_hoje_livros + vencendo_hoje_devices,
+                'vencendo_breve': vencendo_breve_livros + vencendo_breve_devices,
+                'lista': alertas_lista
+            }
         }
         
         cursor.close()
@@ -904,6 +970,7 @@ def criar_equipment():
 
 # ROTA API PARA EQUIPMENT CONTROL - PUT (ATUALIZAR) - ATUALIZADA
 @app.route('/api/equipment-control/<int:equipment_id>', methods=['PUT'])
+@csrf.exempt
 @login_required
 def atualizar_equipment(equipment_id):
     # Verificar se é admin
@@ -988,6 +1055,7 @@ def atualizar_equipment(equipment_id):
 
 # ROTA API PARA EQUIPMENT CONTROL - DELETE (EXCLUIR) - ATUALIZADA
 @app.route('/api/equipment-control/<int:equipment_id>', methods=['DELETE'])
+@csrf.exempt
 @login_required
 def excluir_equipment(equipment_id):
     # Verificar se é admin
@@ -1759,7 +1827,7 @@ def criar_aluno():
         telefone = data.get('telefone')
         email = data.get('email')
         endereco = data.get('endereco')
-        tem_apple_id = data.get('tem_apple_id') == True
+        tem_apple_id = parse_boolean(data.get('tem_apple_id'))
         apple_id = data.get('apple_id')
         tipo_aluno = data.get('tipo_aluno')
         tipo_aluno = data.get('tipo_aluno')
@@ -1859,10 +1927,18 @@ def api_aluno(aluno_id):
             telefone = data.get('telefone')
             email = data.get('email')
             endereco = data.get('endereco')
-            tem_apple_id = data.get('tem_apple_id') == True
+            tem_apple_id = parse_boolean(data.get('tem_apple_id'))
             apple_id = data.get('apple_id')
             tipo_aluno = data.get('tipo_aluno')
             data_inicio = data.get('data_inicio')
+            
+            cursor = get_db_cursor(conn)
+            
+            # Buscar foto_path atual do aluno para preservar durante a edição
+            cursor.execute("SELECT foto_path FROM alunos WHERE id = %s", (aluno_id,))
+            current_aluno = cursor.fetchone()
+            current_foto_path = current_aluno['foto_path'] if current_aluno else None
+            cursor.close()
             
             cursor = conn.cursor()
             
@@ -1879,13 +1955,8 @@ def api_aluno(aluno_id):
                 if existing_cpf:
                     return jsonify({'success': False, 'message': 'CPF já cadastrado em outro aluno!'})
             
-            cursor.execute('''UPDATE alunos SET 
-                            nome = %s, cpf = %s, telefone = %s, email = %s, endereco = %s, 
-                            tem_apple_id = %s, apple_id = %s, tipo_aluno = %s, data_inicio = %s
-                            WHERE id = %s''',
-                         (nome, cpf, telefone, email, endereco, tem_apple_id, apple_id, tipo_aluno, data_inicio, aluno_id))
-            
-            # Processar upload de foto se houver
+            # Processar upload de nova foto (se houver)
+            foto_path = current_foto_path  # Preservar foto atual por padrão
             if 'foto' in request.files:
                 file = request.files['foto']
                 if file and file.filename != '' and allowed_file_image(file.filename):
@@ -1899,9 +1970,14 @@ def api_aluno(aluno_id):
                     
                     file.save(os.path.join(alunos_upload_dir, filename))
                     foto_path = f"uploads/alunos/{filename}"
-                    
-                    # Atualizar caminho da foto no banco
-                    cursor.execute("UPDATE alunos SET foto_path = %s WHERE id = %s", (foto_path, aluno_id))
+            
+            # UPDATE único incluindo foto_path para garantir preservação
+            cursor.execute('''UPDATE alunos SET 
+                            nome = %s, cpf = %s, telefone = %s, email = %s, endereco = %s, 
+                            tem_apple_id = %s, apple_id = %s, tipo_aluno = %s, data_inicio = %s,
+                            foto_path = %s
+                            WHERE id = %s''',
+                         (nome, cpf, telefone, email, endereco, tem_apple_id, apple_id, tipo_aluno, data_inicio, foto_path, aluno_id))
             
             conn.commit()
             cursor.close()
@@ -2585,6 +2661,72 @@ def adicionar_assinatura():
     except Exception as e:
         conn.rollback()
         return jsonify({'success': False, 'message': f'Erro ao adicionar assinatura: {str(e)}'})
+    finally:
+        if conn:
+            conn.close()
+
+# =============================================================================
+# ROTA PARA EDITAR EMPRÉSTIMO
+# =============================================================================
+
+@app.route('/api/emprestimos/<int:emprestimo_id>', methods=['PUT'])
+@csrf.exempt
+@login_required
+def editar_emprestimo(emprestimo_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Erro de conexão com o banco!'}), 500
+    
+    try:
+        data = request.get_json()
+        cursor = get_db_cursor(conn)
+        
+        # Buscar empréstimo atual
+        cursor.execute('SELECT * FROM emprestimos WHERE id = %s', (emprestimo_id,))
+        emp = cursor.fetchone()
+        if not emp:
+            return jsonify({'success': False, 'message': 'Empréstimo não encontrado!'}), 404
+        
+        old_device_id = emp['device_id']
+        old_status = emp['status']
+        
+        new_aluno_id = data.get('aluno_id', emp['aluno_id'])
+        new_device_id = data.get('device_id', emp['device_id'])
+        new_acessorios = data.get('acessorios', emp['acessorios'])
+        new_data_retirada = data.get('data_retirada', emp['data_retirada'])
+        new_data_devolucao = data.get('data_devolucao', emp['data_devolucao'])
+        new_status = data.get('status', emp['status'])
+        
+        cursor2 = conn.cursor()
+        
+        cursor2.execute('''UPDATE emprestimos 
+                        SET aluno_id = %s, device_id = %s, acessorios = %s, 
+                            data_retirada = %s, data_devolucao = %s, status = %s 
+                        WHERE id = %s''',
+                     (new_aluno_id, new_device_id, new_acessorios,
+                      new_data_retirada, new_data_devolucao, new_status, emprestimo_id))
+        
+        # Se mudou de device, liberar o antigo e ocupar o novo 
+        if str(new_device_id) != str(old_device_id):
+            if old_device_id:
+                cursor2.execute("UPDATE devices SET status = 'Disponível' WHERE id = %s", (old_device_id,))
+            if new_device_id and new_status == 'Ativo':
+                cursor2.execute("UPDATE devices SET status = 'Em uso' WHERE id = %s", (new_device_id,))
+        
+        # Se status mudou para Finalizado, liberar o device
+        if new_status == 'Finalizado' and old_status == 'Ativo':
+            cursor2.execute("UPDATE devices SET status = 'Disponível' WHERE id = %s", (new_device_id,))
+        elif new_status == 'Ativo' and old_status == 'Finalizado':
+            cursor2.execute("UPDATE devices SET status = 'Em uso' WHERE id = %s", (new_device_id,))
+        
+        conn.commit()
+        cursor2.close()
+        
+        return jsonify({'success': True, 'message': 'Empréstimo atualizado com sucesso!'})
+    
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Erro ao atualizar empréstimo: {str(e)}'}), 500
     finally:
         if conn:
             conn.close()
@@ -4182,11 +4324,11 @@ def criar_emprestimo_livro():
             if exemplar['status'] != 'Disponível':
                 return jsonify({'success': False, 'message': f"Exemplar indisponível (Status: {exemplar['status']})"})
 
-            # Registrar empréstimo (Atualizado com criado_por, assinatura e data customizada)
+            # Registrar empréstimo (Atualizado com criado_por, assinatura, observacao e data customizada)
             cursor.execute('''
-                INSERT INTO emprestimos_livros (aluno_id, exemplar_id, data_retirada, data_previsao_devolucao, status, criado_por, assinatura)
-                VALUES (%s, %s, %s, %s, 'Ativo', %s, %s)
-            ''', (aluno_id, exemplar['id'], data_retirada, data_previsao, current_user.id, data.get('assinatura')))
+                INSERT INTO emprestimos_livros (aluno_id, exemplar_id, data_retirada, data_previsao_devolucao, status, criado_por, assinatura, observacao)
+                VALUES (%s, %s, %s, %s, 'Ativo', %s, %s, %s)
+            ''', (aluno_id, exemplar['id'], data_retirada, data_previsao, current_user.id, data.get('assinatura'), data.get('observacao')))
             
             # Atualizar status do exemplar
             cursor.execute("UPDATE exemplares SET status = 'Emprestado' WHERE id = %s", (exemplar['id'],))
@@ -4292,21 +4434,83 @@ def listar_eventos():
             ''')
         
         eventos = cursor.fetchall()
+        
+        # 2. Buscar devoluções de livros como eventos
+        cursor.execute('''
+            SELECT el.id, 
+                   CONCAT('Devolução: ', l.titulo) as titulo, 
+                   el.data_previsao_devolucao as data_inicio, 
+                   el.data_previsao_devolucao as data_fim,
+                   'Biblioteca' as local,
+                   '#7c3aed' as cor,
+                   'Devolução Livro' as tipo,
+                   a.nome as participantes
+            FROM emprestimos_livros el
+            JOIN exemplares ex ON el.exemplar_id = ex.id
+            JOIN livros l ON ex.livro_id = l.id
+            JOIN alunos a ON el.aluno_id = a.id
+            WHERE el.status IN ('Ativo', 'Atrasado')
+        ''')
+        devolucoes_livros = cursor.fetchall()
+
+        # 3. Buscar devoluções de devices como eventos
+        cursor.execute('''
+            SELECT e.id, 
+                   CONCAT('Devolução: ', d.nome) as titulo, 
+                   e.data_devolucao as data_inicio, 
+                   e.data_devolucao as data_fim,
+                   'Inventory' as local,
+                   '#4f46e5' as cor,
+                   'Devolução Device' as tipo,
+                   a.nome as participantes
+            FROM emprestimos e
+            JOIN devices d ON e.device_id = d.id
+            JOIN alunos a ON e.aluno_id = a.id
+            WHERE e.status = 'Ativo' AND e.data_devolucao IS NOT NULL
+        ''')
+        devolucoes_devices = cursor.fetchall()
         cursor.close()
         
-        # Formatar datas para ISO format (compatível com FullCalendar)
-        for evento in eventos:
-            if evento['data_inicio']:
-                evento['data_inicio'] = evento['data_inicio'].isoformat()
-            if evento['data_fim']:
-                evento['data_fim'] = evento['data_fim'].isoformat()
-            if evento['data_criacao']:
-                evento['data_criacao'] = evento['data_criacao'].isoformat()
-            evento['sincronizado'] = bool(evento['sincronizado'])
+        # Combinar tudo
+        todos_eventos = []
         
+        # Formatar eventos padrão
+        for ev in eventos:
+            if hasattr(ev['data_inicio'], 'isoformat'): ev['data_inicio'] = ev['data_inicio'].isoformat()
+            if hasattr(ev['data_fim'], 'isoformat'): ev['data_fim'] = ev['data_fim'].isoformat()
+            if hasattr(ev['data_criacao'], 'isoformat'): ev['data_criacao'] = ev['data_criacao'].isoformat()
+            ev['sincronizado'] = bool(ev['sincronizado'])
+            todos_eventos.append(ev)
+
+        # Formatar devoluções de livros
+        for dev in devolucoes_livros:
+            todos_eventos.append({
+                'id': f"lib_{dev['id']}",
+                'titulo': dev['titulo'],
+                'data_inicio': dev['data_inicio'].isoformat() if hasattr(dev['data_inicio'], 'isoformat') else str(dev['data_inicio']),
+                'data_fim': dev['data_fim'].isoformat() if hasattr(dev['data_fim'], 'isoformat') else str(dev['data_fim']),
+                'local': dev['local'],
+                'cor': dev['cor'],
+                'tipo': dev['tipo'],
+                'participantes': dev['participantes']
+            })
+
+        # Formatar devoluções de devices
+        for dev in devolucoes_devices:
+            todos_eventos.append({
+                'id': f"dev_{dev['id']}",
+                'titulo': dev['titulo'],
+                'data_inicio': dev['data_inicio'].isoformat() if hasattr(dev['data_inicio'], 'isoformat') else str(dev['data_inicio']),
+                'data_fim': dev['data_fim'].isoformat() if hasattr(dev['data_fim'], 'isoformat') else str(dev['data_fim']),
+                'local': dev['local'],
+                'cor': dev['cor'],
+                'tipo': dev['tipo'],
+                'participantes': dev['participantes']
+            })
+
         return jsonify({
             'success': True,
-            'data': eventos
+            'data': todos_eventos
         })
         
     except Exception as e:
@@ -4632,6 +4836,31 @@ def enviar_alerta_atraso():
     finally:
         if conn: conn.close()
 
+@app.route('/api/livros/<int:livro_id>/exemplares', methods=['GET'])
+@login_required
+def api_livros_exemplares(livro_id):
+    """Listar exemplares disponíveis de um livro específico"""
+    conn = get_db_connection()
+    if not conn: return jsonify({'success': False, 'message': 'Erro de conexão'}), 500
+    
+    try:
+        cursor = get_db_cursor(conn)
+        cursor.execute('''
+            SELECT e.id, e.codigo_barras, e.status, e.localizacao, e.observacao
+            FROM exemplares e
+            WHERE e.livro_id = %s
+            ORDER BY e.status ASC, e.codigo_barras ASC
+        ''', (livro_id,))
+        
+        exemplares = cursor.fetchall()
+        cursor.close()
+        
+        return jsonify({'success': True, 'data': exemplares})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if conn: conn.close()
+
 @app.route('/api/livros', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @csrf.exempt
 @login_required
@@ -4644,17 +4873,65 @@ def api_livros():
         cursor = get_db_cursor(conn)
 
         if request.method == 'GET':
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 10))
+            search = request.args.get('search', '').strip()
+            offset = (page - 1) * per_page
+
+            # Base parameters for summary and list
+            where_clause = ""
+            params = []
+            if search:
+                where_clause = "WHERE l.titulo LIKE %s OR l.autor LIKE %s OR l.isbn LIKE %s OR l.categoria LIKE %s"
+                search_param = f"%{search}%"
+                params = [search_param] * 4
+
+            # 1. Global Summary Stats (Not affected by pagination, but affected by search if needed)
+            # User wants "Disponíveis" and "Emprestados". Let's get them globally.
             cursor.execute('''
-                SELECT l.*, 
-                       COUNT(e.id) as total_exemplares,
-                       SUM(CASE WHEN e.status = 'Disponível' THEN 1 ELSE 0 END) as disponiveis
+                SELECT 
+                    COUNT(DISTINCT l.id) as total_titulos,
+                    COUNT(e.id) as total_exemplares,
+                    SUM(CASE WHEN e.status = 'Disponível' THEN 1 ELSE 0 END) as disponiveis,
+                    SUM(CASE WHEN e.status = 'Emprestado' THEN 1 ELSE 0 END) as emprestados
                 FROM livros l
                 LEFT JOIN exemplares e ON l.id = e.livro_id
+            ''')
+            summary = cursor.fetchone()
+
+            # 2. Total items for pagination (considering search)
+            count_query = f"SELECT COUNT(*) as count FROM livros l {where_clause}"
+            cursor.execute(count_query, params)
+            total_items = cursor.fetchone()['count']
+            total_pages = (total_items + per_page - 1) // per_page
+
+            # 3. Paginated Data
+            list_query = f'''
+                SELECT l.*, 
+                       COUNT(e.id) as total_exemplares,
+                       SUM(CASE WHEN e.status = 'Disponível' THEN 1 ELSE 0 END) as disponiveis,
+                       SUM(CASE WHEN e.status = 'Emprestado' THEN 1 ELSE 0 END) as emprestados
+                FROM livros l
+                LEFT JOIN exemplares e ON l.id = e.livro_id
+                {where_clause}
                 GROUP BY l.id
                 ORDER BY l.id DESC
-            ''')
+                LIMIT %s OFFSET %s
+            '''
+            cursor.execute(list_query, params + [per_page, offset])
             livros = cursor.fetchall()
-            return jsonify({'success': True, 'data': livros})
+
+            return jsonify({
+                'success': True, 
+                'data': livros,
+                'summary': summary,
+                'pagination': {
+                    'total_items': total_items,
+                    'total_pages': total_pages,
+                    'current_page': page,
+                    'per_page': per_page
+                }
+            })
 
         elif request.method == 'POST':
             if current_user.role != 'admin':

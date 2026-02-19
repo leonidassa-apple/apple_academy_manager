@@ -173,8 +173,8 @@ export default function Admin() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-3 px-8 py-4 font-black text-xs uppercase tracking-widest transition-all rounded-t-3xl relative ${activeTab === tab.id
-                                    ? 'bg-white text-indigo-600 border-x border-t border-slate-100 translate-y-[1px] z-10 shadow-[0_-8px_20px_-10px_rgba(0,0,0,0.05)]'
-                                    : 'text-slate-400 hover:text-slate-600'
+                                ? 'bg-white text-indigo-600 border-x border-t border-slate-100 translate-y-[1px] z-10 shadow-[0_-8px_20px_-10px_rgba(0,0,0,0.05)]'
+                                : 'text-slate-400 hover:text-slate-600'
                                 }`}
                         >
                             <tab.icon size={16} className={activeTab === tab.id ? 'text-indigo-600' : 'text-slate-300'} />
@@ -290,8 +290,8 @@ export default function Admin() {
                                                 </td>
                                                 <td className="px-10 py-6">
                                                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${u.role === 'admin'
-                                                            ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
-                                                            : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                                                        ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
+                                                        : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
                                                         }`}>
                                                         {u.role === 'admin' && <Shield size={12} />}
                                                         {u.role === 'admin' ? 'Acesso Total (Root)' : u.role}
@@ -385,7 +385,7 @@ export default function Admin() {
                                         </div>
                                     </div>
                                     <p className="text-slate-500 font-medium mb-12 leading-relaxed text-lg">
-                                        Uma snapshot integral do ecossistema Apple Academy. Contém registros de estudantes, inventário histórico e configurações de usuários.
+                                        Uma snapshot integral do ecossistema CoreManager. Contém registros de estudantes, inventário histórico e configurações de usuários.
                                     </p>
                                     <a
                                         href="/api/system/backup"

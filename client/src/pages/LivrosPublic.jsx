@@ -50,7 +50,7 @@ const LivrosPublic = () => {
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">EVOLUÇÃO CONSTANTE</span>
                     </h1>
                     <p className="text-slate-400 text-lg md:text-xl font-medium mb-12 max-w-xl mx-auto">
-                        Explore centenas de títulos técnicos, literários e recursos exclusivos da Apple Academy.
+                        Explore centenas de títulos técnicos, literários e recursos exclusivos do CoreManager.
                     </p>
 
                     <div className="relative group max-w-2xl mx-auto">
@@ -118,8 +118,8 @@ const LivrosPublic = () => {
                                     </span>
 
                                     <div className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${livro.disponiveis > 0
-                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                            : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                        : 'bg-rose-50 text-rose-600 border border-rose-100'
                                         }`}>
                                         {livro.disponiveis > 0 ? (
                                             <span className="flex items-center gap-2">

@@ -66,7 +66,7 @@ const EmprestimosLivros = () => {
     );
 
     return (
-        <div className="p-6 max-w-[1600px] mx-auto animate-in fade-in duration-700">
+        <div className="w-full mx-auto animate-in fade-in duration-700">
             {/* Premium Header Container */}
             <div className="bg-white rounded-[2rem] p-8 mb-8 shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-50/50 rounded-full -mr-40 -mt-40 blur-3xl"></div>
@@ -170,11 +170,11 @@ const EmprestimosLivros = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100">
-                                <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Estudante / Leitor</th>
-                                <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Obra / Exemplar</th>
-                                <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Período</th>
-                                <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Situação</th>
-                                <th className="px-8 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em] text-right">Ações</th>
+                                <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Estudante / Leitor</th>
+                                <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Obra / Exemplar</th>
+                                <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Período</th>
+                                <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Situação</th>
+                                <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em] text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -199,7 +199,7 @@ const EmprestimosLivros = () => {
                             ) : (
                                 filteredEmprestimos.map((emp) => (
                                     <tr key={emp.id} className="hover:bg-indigo-50/20 transition-all group">
-                                        <td className="px-8 py-6 whitespace-nowrap">
+                                        <td className="px-6 py-6 whitespace-nowrap">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center text-indigo-600 font-black text-lg shadow-sm border-2 border-white group-hover:scale-110 transition-transform">
                                                     {emp.aluno_nome ? emp.aluno_nome.charAt(0).toUpperCase() : '?'}
@@ -215,7 +215,7 @@ const EmprestimosLivros = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 whitespace-nowrap">
+                                        <td className="px-6 py-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-3 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
                                                     <BookOpen size={20} />
@@ -229,7 +229,7 @@ const EmprestimosLivros = () => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 whitespace-nowrap">
+                                        <td className="px-6 py-6">
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
                                                     <Calendar size={14} className="text-blue-500" />
@@ -248,20 +248,20 @@ const EmprestimosLivros = () => {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 whitespace-nowrap">
+                                        <td className="px-6 py-6">
                                             <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${emp.status === 'Atrasado'
-                                                    ? 'bg-red-50 text-red-700 border-red-100'
-                                                    : emp.status === 'Devolvido'
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                                        : 'bg-blue-50 text-blue-700 border-blue-100'
+                                                ? 'bg-red-50 text-red-700 border-red-100'
+                                                : emp.status === 'Devolvido'
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                                    : 'bg-blue-50 text-blue-700 border-blue-100'
                                                 }`}>
                                                 <span className={`w-1.5 h-1.5 rounded-full ${emp.status === 'Atrasado' ? 'bg-red-500 animate-pulse' :
-                                                        emp.status === 'Devolvido' ? 'bg-emerald-500' : 'bg-blue-500'
+                                                    emp.status === 'Devolvido' ? 'bg-emerald-500' : 'bg-blue-500'
                                                     }`}></span>
                                                 {emp.status}
                                             </span>
                                         </td>
-                                        <td className="px-8 py-6 whitespace-nowrap text-right">
+                                        <td className="px-6 py-6 whitespace-nowrap text-right">
                                             <div className="flex items-center justify-end gap-3">
                                                 {emp.status !== 'Devolvido' ? (
                                                     <button

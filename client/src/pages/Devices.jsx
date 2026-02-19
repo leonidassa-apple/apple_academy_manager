@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Monitor, Edit, Upload, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import DeviceModal from '../components/DeviceModal';
 import DataImportModal from '../components/DataImportModal';
 
 export default function Devices() {
+    const { user: currentUser } = useAuth();
     const [devices, setDevices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -142,20 +144,24 @@ export default function Devices() {
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <button
-                        onClick={handleImport}
-                        className="flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all font-semibold shadow-sm group"
-                    >
-                        <Upload className="w-5 h-5 mr-2 text-gray-400 group-hover:text-blue-500 transition-colors" />
-                        Importar
-                    </button>
-                    <button
-                        onClick={handleCreate}
-                        className="flex-1 md:flex-none flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-bold shadow-lg shadow-blue-200 active:scale-95"
-                    >
-                        <Plus className="w-5 h-5 mr-2" />
-                        Novo Device
-                    </button>
+                    {currentUser?.role === 'admin' && (
+                        <>
+                            <button
+                                onClick={handleImport}
+                                className="flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all font-semibold shadow-sm group"
+                            >
+                                <Upload className="w-5 h-5 mr-2 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                                Importar
+                            </button>
+                            <button
+                                onClick={handleCreate}
+                                className="flex-1 md:flex-none flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-bold shadow-lg shadow-blue-200 active:scale-95"
+                            >
+                                <Plus className="w-5 h-5 mr-2" />
+                                Novo Device
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -194,7 +200,9 @@ export default function Devices() {
                                 <th scope="col" className="hidden lg:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Serial</th>
                                 <th scope="col" className="hidden md:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/3">Local/Obs</th>
                                 <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Status</th>
-                                <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                                {currentUser?.role === 'admin' && (
+                                    <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
@@ -258,25 +266,27 @@ export default function Devices() {
                                                 {d.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <div className="flex items-center justify-end space-x-2">
-                                                <button
-                                                    onClick={() => handleEdit(d)}
-                                                    className={`p-2 rounded-lg transition-all ${d.id < 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
-                                                    title={d.id < 0 ? "Item de sistema - Não editável" : "Editar Device"}
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(d.id, d.nome)}
-                                                    className={`p-2 rounded-lg transition-all ${d.id < 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-rose-600 hover:bg-rose-50'}`}
-                                                    disabled={d.id < 0}
-                                                    title={d.id < 0 ? "Item de sistema - Não excluível" : "Excluir Device"}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
+                                        {currentUser?.role === 'admin' && (
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <div className="flex items-center justify-end space-x-2">
+                                                    <button
+                                                        onClick={() => handleEdit(d)}
+                                                        className={`p-2 rounded-lg transition-all ${d.id < 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                                        title={d.id < 0 ? "Item de sistema - Não editável" : "Editar Device"}
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(d.id, d.nome)}
+                                                        className={`p-2 rounded-lg transition-all ${d.id < 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-rose-600 hover:bg-rose-50'}`}
+                                                        disabled={d.id < 0}
+                                                        title={d.id < 0 ? "Item de sistema - Não excluível" : "Excluir Device"}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))
                             )}
@@ -339,7 +349,7 @@ export default function Devices() {
             </div>
 
             {/* Bulk Actions Bar */}
-            {selectedDevices.length > 0 && (
+            {currentUser?.role === 'admin' && selectedDevices.length > 0 && (
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-bounce-in">
                     <span className="text-sm font-semibold">
                         {selectedDevices.length} item(s) selecionado(s)

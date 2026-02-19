@@ -6,43 +6,42 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: apple_academy_backend
-    restart: unless-stopped
-    env_file:
-      - .env
+    restart: always
     environment:
-      - DB_HOST=host.docker.internal
       - DB_TYPE=mysql
-    ports:
-      - "5001:5001"
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=Academy2024#@!
+      - DB_NAME=apple_academy
+      - SECRET_KEY=sua_chave_secreta_muito_segura_aqui
+      - FLASK_ENV=production
     volumes:
       - ./uploads:/app/uploads
       - ./backend:/app/backend
-  #    depends_on:
-  #      - db
+    depends_on:
+      - db
 
   client:
     build:
       context: .
       dockerfile: Dockerfile.client
     container_name: apple_academy_client
-    restart: unless-stopped
+    restart: always
     ports:
       - "80:80"
     depends_on:
       - backend
 
-#  db:
-#    image: postgres:15-alpine
-#    container_name: apple_academy_db
-#    restart: unless-stopped
-#    environment:
-#      POSTGRES_USER: ${DB_USER:-admin}
-#      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
-#      POSTGRES_DB: ${DB_NAME:-apple_academy}
-#    volumes:
-#      - pgdata:/var/lib/postgresql/data
-#    ports:
-#      - "5432:5432"
+  db:
+    image: mysql:8.0
+    container_name: apple_academy_manager-db-1
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Academy2024#@!
+      MYSQL_DATABASE: apple_academy
+    volumes:
+      - db_data:/var/lib/mysql
 
 volumes:
-  pgdata:
+  db_data:

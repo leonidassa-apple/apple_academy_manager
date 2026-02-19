@@ -22,6 +22,13 @@ const ProtectedRoute = () => {
   return <Layout />;
 };
 
+const AdminRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="flex h-screen items-center justify-center bg-gray-100 text-gray-500">Carregando aplicação...</div>;
+  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  return <Outlet />;
+};
+
 function App() {
   return (
     <Router>
@@ -36,14 +43,18 @@ function App() {
             <Route path="/emprestimos" element={<Emprestimos />} />
             <Route path="/eventos" element={<Eventos />} />
             <Route path="/agenda" element={<Agenda />} />
-            <Route path="/dispositivos" element={<Equipments />} />
-            <Route path="/inventario" element={<Inventory />} />
-            <Route path="/admin" element={<Admin />} />
+            {/* Admin Only Routes */}
+            <Route element={<AdminRoute />}>
+              <Route path="/dispositivos" element={<Equipments />} />
+              <Route path="/inventario" element={<Inventory />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/livros" element={<Livros />} />
+            </Route>
 
-            {/* Books Module Routes */}
-            <Route path="/livros" element={<Livros />} />
+            {/* Books Module Publicly Accessible Routes */}
             <Route path="/biblioteca" element={<LivrosPublic />} />
             <Route path="/emprestimos-livros" element={<EmprestimosLivros />} />
+
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>

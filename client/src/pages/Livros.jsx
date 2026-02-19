@@ -10,6 +10,17 @@ const Livros = () => {
     const [isLivroModalOpen, setIsLivroModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [perPage] = useState(10);
+    const [summaryStats, setSummaryStats] = useState({
+        total_titulos: 0,
+        total_exemplares: 0,
+        disponiveis: 0,
+        emprestados: 0
+    });
+
     // Exemplares state
     const [exemplares, setExemplares] = useState([]);
     const [selectedExemplar, setSelectedExemplar] = useState(null);
@@ -18,15 +29,17 @@ const Livros = () => {
 
     useEffect(() => {
         fetchLivros();
-    }, []);
+    }, [currentPage, searchTerm]);
 
     const fetchLivros = async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/livros');
+            const response = await fetch(`/api/livros?page=${currentPage}&per_page=${perPage}&search=${searchTerm}`);
             const data = await response.json();
             if (data.success) {
                 setLivros(data.data);
+                setTotalPages(data.pagination.total_pages);
+                setSummaryStats(data.summary);
             }
         } catch (error) {
             console.error('Erro ao buscar livros:', error);
@@ -166,11 +179,6 @@ const Livros = () => {
         }
     };
 
-    const filteredLivros = livros.filter(livro =>
-        livro.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        livro.autor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (livro.isbn && livro.isbn.includes(searchTerm))
-    );
 
     return (
         <div className="p-6 max-w-[1700px] mx-auto animate-in fade-in duration-700">
@@ -210,7 +218,7 @@ const Livros = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Títulos</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">{livros.length}</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">{summaryStats.total_titulos}</p>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all group">
@@ -219,7 +227,7 @@ const Livros = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Exemplares</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">{livros.reduce((acc, curr) => acc + (curr.total_exemplares || 0), 0)}</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">{summaryStats.total_exemplares}</p>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all group">
@@ -228,7 +236,7 @@ const Livros = () => {
                     </div>
                     <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Disponíveis</p>
-                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">{livros.reduce((acc, curr) => acc + (curr.disponiveis || 0), 0)}</p>
+                        <p className="text-3xl font-black text-slate-900 mt-1 leading-none">{summaryStats.disponiveis}</p>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all group">
@@ -238,7 +246,7 @@ const Livros = () => {
                     <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Emprestados</p>
                         <p className="text-3xl font-black text-slate-900 mt-1 leading-none">
-                            {livros.reduce((acc, curr) => acc + (curr.total_exemplares - curr.disponiveis || 0), 0)}
+                            {summaryStats.emprestados}
                         </p>
                     </div>
                 </div>
@@ -257,12 +265,18 @@ const Livros = () => {
                                 placeholder="Buscar por título, autor, categoria ou ISBN..."
                                 className="w-full pl-12 pr-4 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-slate-700 font-bold placeholder:text-slate-400 shadow-sm"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1); // Back to first page on search
+                                }}
                             />
                         </div>
                         <div className="flex gap-2">
                             <button
-                                onClick={fetchLivros}
+                                onClick={() => {
+                                    setCurrentPage(1);
+                                    fetchLivros();
+                                }}
                                 className="p-4 bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 rounded-2xl transition-all shadow-sm group"
                                 title="Atualizar Lista"
                             >
@@ -289,7 +303,7 @@ const Livros = () => {
                                             <td colSpan="5" className="px-8 py-10"><div className="h-10 bg-slate-50 rounded-2xl w-full"></div></td>
                                         </tr>
                                     ))
-                                ) : filteredLivros.length === 0 ? (
+                                ) : livros.length === 0 ? (
                                     <tr>
                                         <td colSpan="5" className="px-8 py-32 text-center">
                                             <div className="flex flex-col items-center justify-center">
@@ -302,7 +316,7 @@ const Livros = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredLivros.map(livro => (
+                                    livros.map(livro => (
                                         <tr key={livro.id} className={`hover:bg-indigo-50/20 transition-all group ${viewingExemplaresFor?.id === livro.id ? 'bg-indigo-50/40' : ''}`}>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
@@ -371,98 +385,123 @@ const Livros = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    <div className="p-6 border-t border-slate-50 bg-slate-50/10 flex justify-between items-center">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            Página {currentPage} de {totalPages}
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1 || loading}
+                                className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm active:scale-95"
+                            >
+                                Anterior
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages || loading}
+                                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-indigo-100 active:scale-95"
+                            >
+                                Próxima
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Exemplares Sidebar - Right Panel */}
-                {viewingExemplaresFor && (
-                    <div className="lg:col-span-4 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col max-h-[calc(100vh-200px)] sticky top-6 animate-in slide-in-from-right duration-500 overflow-hidden">
-                        <div className="p-8 border-b border-indigo-50 bg-indigo-50/20 relative">
-                            <button
-                                onClick={() => setViewingExemplaresFor(null)}
-                                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all"
-                            >
-                                <X size={24} />
-                            </button>
+                {
+                    viewingExemplaresFor && (
+                        <div className="lg:col-span-4 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col max-h-[calc(100vh-200px)] sticky top-6 animate-in slide-in-from-right duration-500 overflow-hidden">
+                            <div className="p-8 border-b border-indigo-50 bg-indigo-50/20 relative">
+                                <button
+                                    onClick={() => setViewingExemplaresFor(null)}
+                                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all"
+                                >
+                                    <X size={24} />
+                                </button>
 
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200">
-                                    <Layers size={24} />
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200">
+                                        <Layers size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-900 leading-tight">Exemplares</h3>
+                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mt-1 truncate max-w-[180px]">
+                                            {viewingExemplaresFor.titulo}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-black text-slate-900 leading-tight">Exemplares</h3>
-                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mt-1 truncate max-w-[180px]">
-                                        {viewingExemplaresFor.titulo}
-                                    </p>
-                                </div>
+
+                                <button
+                                    onClick={handleCreateExemplar}
+                                    className="w-full flex items-center justify-center gap-2 py-4 bg-white border-2 border-dashed border-indigo-200 text-indigo-600 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all font-black uppercase text-xs tracking-widest"
+                                >
+                                    <Plus size={18} />
+                                    Adicionar Novo Item
+                                </button>
                             </div>
 
-                            <button
-                                onClick={handleCreateExemplar}
-                                className="w-full flex items-center justify-center gap-2 py-4 bg-white border-2 border-dashed border-indigo-200 text-indigo-600 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all font-black uppercase text-xs tracking-widest"
-                            >
-                                <Plus size={18} />
-                                Adicionar Novo Item
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/20">
-                            {exemplares.length === 0 ? (
-                                <div className="text-center py-16">
-                                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-50 shadow-sm">
-                                        <Layers size={32} className="text-slate-200" />
+                            <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/20">
+                                {exemplares.length === 0 ? (
+                                    <div className="text-center py-16">
+                                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-50 shadow-sm">
+                                            <Layers size={32} className="text-slate-200" />
+                                        </div>
+                                        <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Nenhum exemplar</p>
                                     </div>
-                                    <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Nenhum exemplar</p>
-                                </div>
-                            ) : (
-                                exemplares.map(ex => (
-                                    <div key={ex.id} className="relative bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all group/card">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-8 bg-indigo-600 rounded-full"></div>
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Código Identificador</p>
-                                                    <p className="font-mono text-sm font-black text-slate-900 mt-1">{ex.codigo_barras}</p>
+                                ) : (
+                                    exemplares.map(ex => (
+                                        <div key={ex.id} className="relative bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all group/card">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-8 bg-indigo-600 rounded-full"></div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Código Identificador</p>
+                                                        <p className="font-mono text-sm font-black text-slate-900 mt-1">{ex.codigo_barras}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`inline-flex items-center px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-sm ${ex.status === 'Disponível' ? 'bg-emerald-50 text-emerald-700' :
+                                                    ex.status === 'Emprestado' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-50 text-slate-500'
+                                                    }`}>
+                                                    {ex.status}
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-3 bg-slate-50/50 p-4 rounded-2xl mb-4 border border-slate-50/50">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localização Física:</span>
+                                                    <span className="text-xs font-bold text-slate-700">{ex.localizacao || 'Dante Alighieri'}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Setor:</span>
+                                                    <span className="text-xs font-bold text-slate-700">Acervo Principal</span>
                                                 </div>
                                             </div>
-                                            <span className={`inline-flex items-center px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-sm ${ex.status === 'Disponível' ? 'bg-emerald-50 text-emerald-700' :
-                                                ex.status === 'Emprestado' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-50 text-slate-500'
-                                                }`}>
-                                                {ex.status}
-                                            </span>
-                                        </div>
 
-                                        <div className="space-y-3 bg-slate-50/50 p-4 rounded-2xl mb-4 border border-slate-50/50">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localização Física:</span>
-                                                <span className="text-xs font-bold text-slate-700">{ex.localizacao || 'Dante Alighieri'}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Setor:</span>
-                                                <span className="text-xs font-bold text-slate-700">Acervo Principal</span>
+                                            <div className="flex items-center gap-3 pt-2">
+                                                <button
+                                                    onClick={() => handleEditExemplar(ex)}
+                                                    className="flex-1 py-3 bg-slate-50 text-slate-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all font-black uppercase text-[10px] tracking-widest"
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteExemplar(ex.id)}
+                                                    className="p-3 bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
                                         </div>
-
-                                        <div className="flex items-center gap-3 pt-2">
-                                            <button
-                                                onClick={() => handleEditExemplar(ex)}
-                                                className="flex-1 py-3 bg-slate-50 text-slate-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all font-black uppercase text-[10px] tracking-widest"
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteExemplar(ex.id)}
-                                                className="p-3 bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
+                                    ))
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )
+                }
+            </div >
 
             <LivroModal
                 isOpen={isLivroModalOpen}
@@ -478,7 +517,7 @@ const Livros = () => {
                 exemplar={selectedExemplar}
                 livroTitulo={viewingExemplaresFor?.titulo}
             />
-        </div>
+        </div >
     );
 };
 

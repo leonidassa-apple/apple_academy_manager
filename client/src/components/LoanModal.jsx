@@ -10,6 +10,10 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
     const [showStudentsDropdown, setShowStudentsDropdown] = useState(false);
 
     const [devices, setDevices] = useState([]);
+    const [filteredDevices, setFilteredDevices] = useState([]);
+    const [deviceSearch, setDeviceSearch] = useState('');
+    const [showDevicesDropdown, setShowDevicesDropdown] = useState(false);
+
     const [formData, setFormData] = useState({
         aluno_id: '',
         device_id: '',
@@ -21,6 +25,8 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
     const [scanning, setScanning] = useState(false);
     const sigCanvas = useRef({});
     const dropdownRef = useRef(null);
+    const devicesDropdownRef = useRef(null);
+
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -33,11 +39,16 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
                     setStudents(studentsData.data);
                     setFilteredStudents(studentsData.data);
                 }
-                if (Array.isArray(devicesData)) setDevices(devicesData);
+                if (Array.isArray(devicesData)) {
+                    setDevices(devicesData);
+                    setFilteredDevices(devicesData);
+                }
             }).catch(err => console.error("Error loading resources:", err));
 
             setStudentSearch('');
+            setDeviceSearch('');
             setShowStudentsDropdown(false);
+            setShowDevicesDropdown(false);
         }
     }, [isOpen]);
 
@@ -46,6 +57,9 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
         function handleClickOutside(event) {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setShowStudentsDropdown(false);
+            }
+            if (devicesDropdownRef.current && !devicesDropdownRef.current.contains(event.target)) {
+                setShowDevicesDropdown(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -58,6 +72,37 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
         );
         setFilteredStudents(result);
     }, [studentSearch, students]);
+
+    useEffect(() => {
+        const lowerSearch = deviceSearch.toLowerCase();
+        const result = devices.filter(d =>
+            d.nome?.toLowerCase().includes(lowerSearch) ||
+            d.tipo?.toLowerCase().includes(lowerSearch) ||
+            d.numero_serie?.toLowerCase().includes(lowerSearch)
+        );
+        setFilteredDevices(result);
+    }, [deviceSearch, devices]);
+
+    const handleSelectDevice = (device) => {
+        setFormData(prev => ({ ...prev, device_id: device.id }));
+        setDeviceSearch(device.nome + (device.numero_serie ? ` - ${device.numero_serie}` : ''));
+        setShowDevicesDropdown(false);
+    };
+
+    const handleAccessoryChange = (accessory) => {
+        setFormData(prev => {
+            const currentAccessories = prev.acessorios ? prev.acessorios.split(', ').filter(Boolean) : [];
+            let newAccessories;
+
+            if (currentAccessories.includes(accessory)) {
+                newAccessories = currentAccessories.filter(a => a !== accessory);
+            } else {
+                newAccessories = [...currentAccessories, accessory];
+            }
+
+            return { ...prev, acessorios: newAccessories.join(', ') };
+        });
+    };
 
     const handleSelectStudent = (student) => {
         setFormData(prev => ({ ...prev, aluno_id: student.id }));
@@ -105,6 +150,7 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
 
                             if (foundDevice) {
                                 setFormData(prev => ({ ...prev, device_id: foundDevice.id }));
+                                setDeviceSearch(foundDevice.nome + (foundDevice.numero_serie ? ` - ${foundDevice.numero_serie}` : ''));
                                 if (navigator.vibrate) navigator.vibrate(200);
                                 stopScanner().then(() => setScanning(false));
                             } else {
@@ -119,6 +165,7 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
                             const foundDevice = devices.find(d => d.numero_serie === decodedText);
                             if (foundDevice) {
                                 setFormData(prev => ({ ...prev, device_id: foundDevice.id }));
+                                setDeviceSearch(foundDevice.nome + (foundDevice.numero_serie ? ` - ${foundDevice.numero_serie}` : ''));
                                 stopScanner().then(() => setScanning(false));
                             } else {
                                 alert(`Device com serial ${decodedText} não encontrado ou indisponível.`);
@@ -275,25 +322,61 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
                             </div>
 
                             {/* Device Select */}
-                            <div className="space-y-1.5">
+                            <div className="space-y-1.5" ref={devicesDropdownRef}>
                                 <label className="block text-sm font-semibold text-gray-700 ml-1">Equipamento</label>
                                 <div className="grid grid-cols-[1fr,auto] gap-2">
-                                    <div className="relative">
+                                    <div className="relative group">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Smartphone className="h-5 w-5 text-gray-400" />
+                                            <Smartphone className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                                         </div>
-                                        <select
-                                            name="device_id"
-                                            value={formData.device_id}
-                                            onChange={handleChange}
-                                            className="block w-full pl-10 pr-8 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm appearance-none text-sm"
-                                            required
-                                        >
-                                            <option value="">Selecione...</option>
-                                            {devices.map(d => (
-                                                <option key={d.id} value={d.id}>{d.nome} - {d.tipo}</option>
-                                            ))}
-                                        </select>
+                                        <input
+                                            type="text"
+                                            placeholder="Pesquise por nome, tipo ou Serial Number..."
+                                            value={deviceSearch}
+                                            onChange={(e) => {
+                                                setDeviceSearch(e.target.value);
+                                                setShowDevicesDropdown(true);
+                                                if (e.target.value === '') setFormData(prev => ({ ...prev, device_id: '' }));
+                                            }}
+                                            onFocus={() => setShowDevicesDropdown(true)}
+                                            className={`block w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm ${formData.device_id ? 'border-green-200 bg-green-50/30' : ''}`}
+                                        />
+                                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                            <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showDevicesDropdown ? 'rotate-180' : ''}`} />
+                                        </div>
+
+                                        {showDevicesDropdown && (
+                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-fade-in-down left-0">
+                                                {filteredDevices.length > 0 ? (
+                                                    filteredDevices.map(d => (
+                                                        <button
+                                                            key={d.id}
+                                                            type="button"
+                                                            onClick={() => handleSelectDevice(d)}
+                                                            className="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center justify-between group transition-colors border-b border-gray-50 last:border-none"
+                                                        >
+                                                            <div>
+                                                                <div className="font-semibold text-gray-800">{d.nome}</div>
+                                                                <div className="text-xs text-gray-500 flex items-center gap-2">
+                                                                    <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-mono text-[10px]">{d.tipo}</span>
+                                                                    {d.numero_serie && (
+                                                                        <span className="text-blue-600 font-mono">SN: {d.numero_serie}</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            {formData.device_id === d.id && (
+                                                                <CheckCircle className="w-5 h-5 text-green-500" />
+                                                            )}
+                                                        </button>
+                                                    ))
+                                                ) : (
+                                                    <div className="px-4 py-8 text-center text-gray-500 flex flex-col items-center">
+                                                        <AlertCircle className="w-8 h-8 mb-2 text-gray-300" />
+                                                        <p className="font-medium">Nenhum equipamento encontrado</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <button
                                         type="button"
@@ -328,20 +411,25 @@ export default function LoanModal({ isOpen, onClose, onSuccess }) {
                         )}
 
                         {/* Accessories */}
-                        <div className="space-y-1.5">
+                        <div className="space-y-3">
                             <label className="block text-sm font-semibold text-gray-700 ml-1">Acessórios Incluídos</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Package className="h-5 w-5 text-gray-400" />
-                                </div>
-                                <input
-                                    type="text"
-                                    name="acessorios"
-                                    value={formData.acessorios}
-                                    onChange={handleChange}
-                                    placeholder="Ex: Carregador USB-C, Cabo Lightning, Capa..."
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
-                                />
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {['Carregador', 'Cabo', 'Apple Pencil'].map((acc) => (
+                                    <label key={acc} className={`
+                                        flex items-center p-3 rounded-xl border cursor-pointer transition-all select-none
+                                        ${formData.acessorios.includes(acc)
+                                            ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
+                                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}
+                                    `}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.acessorios.includes(acc)}
+                                            onChange={() => handleAccessoryChange(acc)}
+                                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                        />
+                                        <span className="ml-2 text-sm font-medium">{acc}</span>
+                                    </label>
+                                ))}
                             </div>
                         </div>
 

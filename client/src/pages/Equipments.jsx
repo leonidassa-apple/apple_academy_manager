@@ -168,6 +168,7 @@ const Equipments = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(submissionData)
             });
+
             const result = await response.json();
             if (result.success) {
                 setIsEditModalOpen(false);
@@ -195,7 +196,7 @@ const Equipments = () => {
                 armazenamento: equipment.armazenamento || '',
                 tela: equipment.tela || '',
                 status: equipment.status || 'Disponível',
-                para_emprestimo: equipment.para_emprestimo,
+                para_emprestimo: !!equipment.para_emprestimo,
                 responsavel: equipment.responsavel || '',
                 local: equipment.local || '',
                 convenio: equipment.convenio || '',
@@ -406,7 +407,7 @@ const Equipments = () => {
 
             {/* Main Table Area */}
             <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col min-h-[500px]">
-                <div className="overflow-x-auto">
+                <div className="hidden lg:block overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -507,7 +508,7 @@ const Equipments = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-6 text-right">
-                                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                        <div className="flex items-center justify-end gap-3 transition-all duration-200">
                                             <button
                                                 onClick={() => handleOpenEdit(item)}
                                                 className="p-3 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-xl hover:shadow-blue-100 rounded-[1rem] transition-all bg-slate-50/50"
@@ -534,6 +535,70 @@ const Equipments = () => {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile/Tablet Card View - Visible only on smaller screens */}
+                <div className="lg:hidden p-4 space-y-4 bg-slate-50/30">
+                    {paginatedItems.map((item) => (
+                        <div key={item.id} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                                        {item.tipo_device?.toLowerCase().includes('mac') || item.tipo_device?.toLowerCase().includes('lab') ? <Laptop size={28} /> :
+                                            item.tipo_device?.toLowerCase().includes('pad') ? <Laptop size={28} /> : <Smartphone size={28} />}
+                                    </div>
+                                    <div>
+                                        <p className="font-black text-slate-900 text-lg leading-tight uppercase tracking-tight">{item.tipo_device}</p>
+                                        <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">{item.numero_serie}</p>
+                                    </div>
+                                </div>
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${getStatusStyles(item.status)}`}>
+                                    {item.status}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mb-5 p-4 bg-slate-50/50 rounded-2xl border border-slate-50">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Modelo</p>
+                                    <p className="text-sm font-bold text-slate-700 truncate">{item.modelo || 'N/A'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Local</p>
+                                    <p className="text-sm font-bold text-slate-700 truncate">{item.local || 'N/A'}</p>
+                                </div>
+                                <div className="space-y-1 col-span-2">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Responsável</p>
+                                    <p className="text-sm font-bold text-slate-700 truncate">{item.responsavel || 'N/A'}</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-auto pt-6 border-t border-slate-50">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 text-center">Opções de Controle</p>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => handleOpenEdit(item)}
+                                        className="flex-1 flex items-center justify-center gap-2 py-4 bg-blue-50 text-blue-600 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all hover:bg-blue-600 hover:text-white"
+                                    >
+                                        <Edit2 size={18} />
+                                        Editar
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (window.confirm('Excluir este equipamento?')) {
+                                                const res = await fetch(`/api/equipment-control/${item.id}`, { method: 'DELETE' });
+                                                const data = await res.json();
+                                                if (data.success) loadData();
+                                            }
+                                        }}
+                                        className="flex-1 flex items-center justify-center gap-2 py-4 bg-rose-50 text-rose-600 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all hover:bg-rose-600 hover:text-white"
+                                    >
+                                        <Trash2 size={18} />
+                                        Excluir
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Modern Pagination Area */}
@@ -607,9 +672,9 @@ const Equipments = () => {
             {isEditModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsEditModalOpen(false)}></div>
-                    <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col relative z-10 animate-in zoom-in-95 duration-300 border border-white/20">
+                    <div className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl w-full max-w-5xl max-h-[95vh] md:max-h-[92vh] overflow-hidden flex flex-col relative z-10 animate-in zoom-in-95 duration-300 border border-white/20">
                         {/* Modal Header */}
-                        <div className="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700">
+                        <div className="px-6 py-6 md:px-10 md:py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700">
                             <div className="flex items-center gap-5">
                                 <div className="p-3 bg-white/20 rounded-[1.5rem] backdrop-blur-md">
                                     <Laptop className="w-8 h-8 text-white" />
@@ -626,7 +691,7 @@ const Equipments = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSave} className="overflow-y-auto p-10 bg-slate-50/30">
+                        <form onSubmit={handleSave} className="overflow-y-auto p-6 md:p-10 bg-slate-50/30">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                                 {/* Basic Info Section */}
                                 <div className="space-y-8">
@@ -672,7 +737,7 @@ const Equipments = () => {
                                                 placeholder="Ex: MacBook Pro M2"
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Cor</label>
                                                 <input
@@ -694,7 +759,7 @@ const Equipments = () => {
                                                 />
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Memória</label>
                                                 <input
@@ -726,7 +791,7 @@ const Equipments = () => {
                                         <h3 className="text-md font-black text-slate-900 uppercase tracking-widest">Controle & Localização</h3>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Status Ativo *</label>
                                             <div className="relative group">
@@ -747,17 +812,19 @@ const Equipments = () => {
                                         <div className="space-y-2">
                                             <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] pl-1">P/ Empréstimo</label>
                                             <div className="flex items-center gap-3 h-[60px] px-5 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                                <div className="relative inline-flex items-center cursor-pointer">
+                                                <label className="relative inline-flex items-center cursor-pointer">
                                                     <input
                                                         type="checkbox"
                                                         id="para_emprestimo"
                                                         className="sr-only peer"
                                                         checked={formData.para_emprestimo}
-                                                        onChange={(e) => setFormData({ ...formData, para_emprestimo: e.target.checked })}
+                                                        onChange={(e) => {
+                                                            setFormData({ ...formData, para_emprestimo: e.target.checked });
+                                                        }}
                                                     />
                                                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                                </div>
-                                                <label htmlFor="para_emprestimo" className="text-sm font-black text-slate-600 uppercase tracking-tight">Liberado</label>
+                                                    <span className="ml-3 text-sm font-black text-slate-600 uppercase tracking-tight">Liberado</span>
+                                                </label>
                                             </div>
                                         </div>
                                     </div>

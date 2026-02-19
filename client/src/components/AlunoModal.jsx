@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Upload, User, Mail, FileText, Phone, BookOpen, CreditCard, Apple, Camera } from 'lucide-react';
+import { X, Save, Upload, User, Mail, FileText, Phone, BookOpen, CreditCard, Apple, Camera, Eye, EyeOff } from 'lucide-react';
 
 export default function AlunoModal({ isOpen, onClose, onSave, student = null }) {
     const [formData, setFormData] = useState({
@@ -16,6 +16,7 @@ export default function AlunoModal({ isOpen, onClose, onSave, student = null }) 
     const [loading, setLoading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [dragActive, setDragActive] = useState(false);
+    const [showCPF, setShowCPF] = useState(false);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -100,12 +101,17 @@ export default function AlunoModal({ isOpen, onClose, onSave, student = null }) 
 
             const formPayload = new FormData();
 
+            // Campos que não devem ser enviados como dados de formulário:
+            // - foto_path: valor gerenciado pelo backend (não sobrescrever)
+            // - foto: tratado separadamente como arquivo
+            const excludeFields = ['foto', 'foto_path'];
+
             Object.keys(formData).forEach(key => {
                 if (key === 'foto') {
                     if (formData[key]) {
                         formPayload.append('foto', formData[key]);
                     }
-                } else {
+                } else if (!excludeFields.includes(key)) {
                     formPayload.append(key, formData[key] === null ? '' : formData[key]);
                 }
             });
@@ -269,12 +275,19 @@ export default function AlunoModal({ isOpen, onClose, onSave, student = null }) 
                                                 <CreditCard className="h-5 w-5 text-gray-400" />
                                             </div>
                                             <input
-                                                type="text"
-                                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+                                                type={showCPF ? "text" : "password"}
+                                                className="block w-full pl-10 pr-12 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
                                                 placeholder="000.000.000-00"
                                                 value={formData.cpf || ''}
                                                 onChange={e => setFormData({ ...formData, cpf: e.target.value })}
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCPF(!showCPF)}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-blue-500 transition-colors"
+                                            >
+                                                {showCPF ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                            </button>
                                         </div>
                                     </div>
 
@@ -331,7 +344,14 @@ export default function AlunoModal({ isOpen, onClose, onSave, student = null }) 
                                                     type="checkbox"
                                                     className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                                     checked={formData.tem_apple_id}
-                                                    onChange={e => setFormData({ ...formData, tem_apple_id: e.target.checked })}
+                                                    onChange={e => {
+                                                        const checked = e.target.checked;
+                                                        setFormData({
+                                                            ...formData,
+                                                            tem_apple_id: checked,
+                                                            apple_id: checked ? formData.apple_id : ''
+                                                        });
+                                                    }}
                                                 />
                                             </div>
                                             <div className="flex-1">
@@ -343,18 +363,20 @@ export default function AlunoModal({ isOpen, onClose, onSave, student = null }) 
                                                     Marque esta opção se o aluno tiver uma conta Apple ID corporativa ou educacional.
                                                 </p>
 
-                                                {/* Apple ID Input com animação */}
-                                                <div className={`mt-4 transition-all duration-300 overflow-hidden ${formData.tem_apple_id ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                                    <div className="relative">
-                                                        <input
-                                                            type="email"
-                                                            className="block w-full pl-3 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
-                                                            placeholder="exemplo@apple.com"
-                                                            value={formData.apple_id || ''}
-                                                            onChange={e => setFormData({ ...formData, apple_id: e.target.value })}
-                                                        />
+                                                {/* Apple ID Input com renderização condicional para evitar validação do navegador */}
+                                                {formData.tem_apple_id && (
+                                                    <div className="mt-4 transition-all duration-300">
+                                                        <div className="relative">
+                                                            <input
+                                                                type="email"
+                                                                className="block w-full pl-3 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                                                                placeholder="exemplo@apple.com"
+                                                                value={formData.apple_id || ''}
+                                                                onChange={e => setFormData({ ...formData, apple_id: e.target.value })}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

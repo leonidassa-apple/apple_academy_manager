@@ -331,8 +331,8 @@ export default function Emprestimos() {
                                     </div>
                                     <div>
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Equipamento</p>
-                                        <p className="text-base font-black text-slate-900">{viewLoan.device_nome || 'N/A'}</p>
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{viewLoan.device_tipo}</p>
+                                        <p className="text-base font-black text-slate-900">{viewLoan.device_tipo || 'N/A'}</p>
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">S/N: {viewLoan.device_numero_serie || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>

@@ -2507,7 +2507,7 @@ def api_emprestimos_lista():
         
     try:
         cursor = get_db_cursor(conn)
-        cursor.execute('''SELECT e.*, a.nome as aluno_nome, d.nome as device_nome, d.tipo as device_tipo
+        cursor.execute('''SELECT e.*, a.nome as aluno_nome, d.nome as device_nome, d.tipo as device_tipo, d.numero_serie as device_numero_serie
                          FROM emprestimos e
                          LEFT JOIN alunos a ON e.aluno_id = a.id
                          LEFT JOIN devices d ON e.device_id = d.id

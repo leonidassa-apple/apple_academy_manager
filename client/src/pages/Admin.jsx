@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Smartphone, Shield, Activity, Plus, Edit2, Trash2, CheckCircle, Search, User, Filter, RefreshCw, Upload, Database, Download, AlertTriangle } from 'lucide-react';
+import { Users, Smartphone, Shield, Activity, Plus, Edit2, Trash2, CheckCircle, Search, User, Filter, RefreshCw, Upload, Database, Download, AlertTriangle, Mail, Send, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
 import UserModal from '../components/UserModal';
 import DeviceTypeModal from '../components/DeviceTypeModal';
 
@@ -9,6 +9,23 @@ export default function Admin() {
     const [deviceTypes, setDeviceTypes] = useState([]);
     const [activeTab, setActiveTab] = useState('dashboard');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Email config state
+    const [emailConfig, setEmailConfig] = useState({
+        mail_server: 'smtp.gmail.com',
+        mail_port: 587,
+        mail_use_tls: true,
+        mail_username: '',
+        mail_password: '',
+        mail_default_sender: '',
+        email_template_emprestimo: '',
+        has_password: false,
+        atualizado_em: null
+    });
+    const [emailSaving, setEmailSaving] = useState(false);
+    const [emailTesting, setEmailTesting] = useState(false);
+    const [emailMsg, setEmailMsg] = useState(null); // {type: 'success'|'error', text: ''}
+    const [showPassword, setShowPassword] = useState(false);
 
     // Modal states
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -20,6 +37,7 @@ export default function Admin() {
         fetchStats();
         fetchUsers();
         fetchDeviceTypes();
+        fetchEmailConfig();
     }, []);
 
     // Reset search when tab changes
@@ -43,6 +61,50 @@ export default function Admin() {
         fetch('/api/admin/tipos-devices').then(res => res.json()).then(data => {
             if (data.success) setDeviceTypes(data.data);
         });
+    };
+
+    const fetchEmailConfig = () => {
+        fetch('/api/admin/email-config').then(res => res.json()).then(data => {
+            if (data.success && data.data) {
+                setEmailConfig(prev => ({ ...prev, ...data.data, mail_password: '' }));
+            }
+        });
+    };
+
+    const handleSaveEmail = async (e) => {
+        e.preventDefault();
+        setEmailSaving(true);
+        setEmailMsg(null);
+        try {
+            const payload = { ...emailConfig };
+            if (!payload.mail_password) delete payload.mail_password; // não sobrescrever se vazio
+            const res = await fetch('/api/admin/email-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            setEmailMsg({ type: data.success ? 'success' : 'error', text: data.message });
+            if (data.success) fetchEmailConfig();
+        } catch (err) {
+            setEmailMsg({ type: 'error', text: 'Erro de comunicação com o servidor.' });
+        } finally {
+            setEmailSaving(false);
+        }
+    };
+
+    const handleTestEmail = async () => {
+        setEmailTesting(true);
+        setEmailMsg(null);
+        try {
+            const res = await fetch('/api/admin/email-config/testar', { method: 'POST' });
+            const data = await res.json();
+            setEmailMsg({ type: data.success ? 'success' : 'error', text: data.message });
+        } catch (err) {
+            setEmailMsg({ type: 'error', text: 'Erro ao enviar e-mail de teste.' });
+        } finally {
+            setEmailTesting(false);
+        }
     };
 
     const handleCreateUser = () => {
@@ -167,6 +229,7 @@ export default function Admin() {
                         { id: 'dashboard', label: 'Dashboard', icon: Activity },
                         { id: 'users', label: 'Equipe', icon: Users },
                         { id: 'types', label: 'Catálogo', icon: Smartphone },
+                        { id: 'email', label: 'E-mail', icon: Mail },
                         { id: 'system', label: 'Infraestrutura', icon: Database }
                     ].map(tab => (
                         <button
@@ -367,6 +430,195 @@ export default function Admin() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* Email Config Segment */}
+                    {activeTab === 'email' && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
+                            <div className="flex items-center gap-5 mb-10">
+                                <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-xl shadow-blue-100">
+                                    <Mail size={28} className="text-white" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Configuração de E-mail</h2>
+                                    <p className="text-slate-400 font-medium text-sm mt-0.5">Defina o servidor SMTP para envio de notificações</p>
+                                </div>
+                            </div>
+
+                            {/* Feedback message */}
+                            {emailMsg && (
+                                <div className={`flex items-center gap-3 p-4 rounded-2xl mb-6 text-sm font-bold
+                                    ${emailMsg.type === 'success'
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                        : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                                    {emailMsg.type === 'success'
+                                        ? <CheckCircle2 size={20} className="flex-shrink-0" />
+                                        : <XCircle size={20} className="flex-shrink-0" />}
+                                    {emailMsg.text}
+                                </div>
+                            )}
+
+                            {/* Gmail hint */}
+                            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 mb-8 flex gap-4 items-start">
+                                <Mail size={20} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                                <div className="text-xs text-blue-800 font-semibold leading-relaxed">
+                                    <p className="font-black mb-1">Usando Gmail?</p>
+                                    Use seu e-mail Gmail como usuário e crie uma <strong>Senha de App</strong> em:
+                                    {' '}<a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="underline text-blue-700 hover:text-blue-900">myaccount.google.com/apppasswords</a>.
+                                    <br />Servidor: <code className="bg-blue-100 px-1.5 py-0.5 rounded-md">smtp.gmail.com</code> &nbsp;|&nbsp; Porta: <code className="bg-blue-100 px-1.5 py-0.5 rounded-md">587</code> &nbsp;|&nbsp; TLS: <strong>Ativado</strong>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleSaveEmail} className="space-y-6">
+                                {/* Server + Port */}
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Servidor SMTP</label>
+                                        <input
+                                            type="text"
+                                            value={emailConfig.mail_server}
+                                            onChange={e => setEmailConfig(p => ({ ...p, mail_server: e.target.value }))}
+                                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 focus:bg-white transition-all text-slate-700 font-bold"
+                                            placeholder="smtp.gmail.com"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Porta</label>
+                                        <input
+                                            type="number"
+                                            value={emailConfig.mail_port}
+                                            onChange={e => setEmailConfig(p => ({ ...p, mail_port: parseInt(e.target.value) }))}
+                                            className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 focus:bg-white transition-all text-slate-700 font-bold"
+                                            placeholder="587"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* TLS Toggle */}
+                                <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4">
+                                    <div>
+                                        <p className="font-black text-slate-700 text-sm">Usar TLS (Recomendado)</p>
+                                        <p className="text-xs text-slate-400 font-medium mt-0.5">Criptografia da conexão com o servidor SMTP</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEmailConfig(p => ({ ...p, mail_use_tls: !p.mail_use_tls }))}
+                                        className={`relative w-14 h-7 rounded-full transition-colors duration-300 focus:outline-none ${emailConfig.mail_use_tls ? 'bg-indigo-600' : 'bg-slate-200'
+                                            }`}
+                                    >
+                                        <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${emailConfig.mail_use_tls ? 'translate-x-7' : 'translate-x-0'
+                                            }`} />
+                                    </button>
+                                </div>
+
+                                {/* Username */}
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">E-mail Remetente (Usuário SMTP)</label>
+                                    <input
+                                        type="email"
+                                        value={emailConfig.mail_username}
+                                        onChange={e => setEmailConfig(p => ({ ...p, mail_username: e.target.value, mail_default_sender: e.target.value }))}
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 focus:bg-white transition-all text-slate-700 font-bold"
+                                        placeholder="seuemail@gmail.com"
+                                        required
+                                    />
+                                </div>
+
+                                {/* Password */}
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
+                                        Senha de App / Token SMTP
+                                        {emailConfig.has_password && (
+                                            <span className="ml-2 text-emerald-600 normal-case font-bold">(já configurada — deixe vazio para manter)</span>
+                                        )}
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={emailConfig.mail_password}
+                                            onChange={e => setEmailConfig(p => ({ ...p, mail_password: e.target.value }))}
+                                            className="w-full px-5 py-4 pr-14 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 focus:bg-white transition-all text-slate-700 font-bold"
+                                            placeholder={emailConfig.has_password ? '••••••••••••' : 'Senha de App do Google'}
+                                        />
+                                        <button type="button" onClick={() => setShowPassword(p => !p)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Template de Confirmação de Empréstimo */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">
+                                            Mensagem de Confirmação de Empréstimo
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEmailConfig(p => ({
+                                                ...p, email_template_emprestimo:
+                                                    `Olá, {aluno}!
+
+Esse é o e-mail automático de confirmação do empréstimo do livro/device {item}, no dia {data}, autorizado por {responsavel}.
+
+Caso você não tenha feito esse empréstimo, contate imediatamente a equipe de TI ou mentores.` }))}
+                                            className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors"
+                                        >
+                                            ↩ Usar Modelo Padrão
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        value={emailConfig.email_template_emprestimo || ''}
+                                        onChange={e => setEmailConfig(p => ({ ...p, email_template_emprestimo: e.target.value }))}
+                                        rows={8}
+                                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 focus:bg-white transition-all text-slate-700 font-mono text-sm resize-y"
+                                        placeholder={`Olá, {aluno}!\n\nEsse é o e-mail automático de confirmação do empréstimo do livro/device {item}, no dia {data}, autorizado por {responsavel}.\n\nCaso você não tenha feito esse empréstimo, contate imediatamente a equipe de TI ou mentores.`}
+                                    />
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {['{aluno}', '{item}', '{data}', '{data_devolucao}', '{responsavel}'].map(v => (
+                                            <button
+                                                key={v}
+                                                type="button"
+                                                onClick={() => setEmailConfig(p => ({ ...p, email_template_emprestimo: (p.email_template_emprestimo || '') + v }))}
+                                                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black font-mono tracking-wider transition-colors"
+                                            >
+                                                {v}
+                                            </button>
+                                        ))}
+                                        <span className="text-[10px] text-slate-400 font-medium self-center ml-1">clique para inserir a variável</span>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-4 pt-2">
+                                    <button
+                                        type="submit"
+                                        disabled={emailSaving}
+                                        className="flex-1 flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-indigo-600 to-violet-700 text-white rounded-3xl hover:from-indigo-700 hover:to-violet-800 transition-all shadow-xl shadow-indigo-100 font-black text-xs uppercase tracking-widest active:scale-95 disabled:opacity-60"
+                                    >
+                                        {emailSaving ? <RefreshCw size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                                        {emailSaving ? 'Salvando...' : 'Salvar Configurações'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleTestEmail}
+                                        disabled={emailTesting || !emailConfig.mail_username}
+                                        className="flex items-center gap-2 px-8 py-5 bg-white border border-slate-200 rounded-3xl text-slate-700 hover:border-indigo-400 hover:text-indigo-700 transition-all font-black text-xs uppercase tracking-widest shadow-sm active:scale-95 disabled:opacity-40"
+                                    >
+                                        {emailTesting ? <RefreshCw size={18} className="animate-spin" /> : <Send size={18} />}
+                                        Testar
+                                    </button>
+                                </div>
+
+                                {emailConfig.atualizado_em && (
+                                    <p className="text-center text-xs text-slate-400 font-medium">
+                                        Última atualização: {new Date(emailConfig.atualizado_em).toLocaleString('pt-BR')}
+                                    </p>
+                                )}
+                            </form>
                         </div>
                     )}
 

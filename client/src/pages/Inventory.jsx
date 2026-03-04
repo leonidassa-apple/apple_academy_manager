@@ -449,22 +449,39 @@ const Inventory = () => {
                     </table>
                 </div>
 
-                {/* Pagination */}
-                <div className="mt-auto px-8 py-6 border-t border-slate-50 flex items-center justify-between bg-slate-50/20">
-                    <p className="text-sm font-bold text-slate-400">
-                        Página <span className="text-blue-600">{currentPage}</span> de <span className="text-slate-900">{totalPages}</span>
-                    </p>
+                {/* Modern Pagination Area - Standardized Premium Style */}
+                <div className="mt-auto px-8 py-6 border-t border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                            Mostrando <span className="text-blue-600 px-1">{filteredItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} — {Math.min(currentPage * itemsPerPage, filteredItems.length)}</span> de <span className="text-slate-900">{filteredItems.length}</span> registros
+                        </div>
+                        <div className="relative group min-w-[140px]">
+                            <select
+                                className="w-full pl-5 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 cursor-pointer appearance-none transition-all shadow-sm group-hover:border-blue-200"
+                                value={itemsPerPage}
+                                onChange={(e) => {
+                                    setItemsPerPage(parseInt(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <option value={10}>Exibir 10</option>
+                                <option value={20}>Exibir 20</option>
+                                <option value={50}>Exibir 50</option>
+                            </select>
+                            <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
+                        </div>
+                    </div>
+
                     <div className="flex items-center gap-2">
                         <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(p => p - 1)}
-                            className="p-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-100 shadow-sm"
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-blue-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
                         >
-                            <ChevronLeft size={20} />
+                            <ChevronLeft size={22} />
                         </button>
 
-                        <div className="flex items-center gap-1 mx-2">
-                            {/* Simple dynamic pagination showing few pages */}
+                        <div className="flex items-center gap-2 mx-3">
                             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                                 let pageNum;
                                 if (totalPages <= 5) pageNum = i + 1;
@@ -476,7 +493,7 @@ const Inventory = () => {
                                     <button
                                         key={pageNum}
                                         onClick={() => setCurrentPage(pageNum)}
-                                        className={`w-11 h-11 rounded-2xl font-black text-sm transition-all ${currentPage === pageNum ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-200' : 'bg-white hover:bg-blue-50 text-slate-600 border border-slate-100 hover:border-blue-100'}`}
+                                        className={`w-12 h-12 rounded-[1.25rem] font-black text-sm transition-all shadow-sm ${currentPage === pageNum ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-100 scale-110' : 'bg-white hover:bg-blue-50 text-slate-500 border border-slate-100 hover:border-blue-200'}`}
                                     >
                                         {pageNum}
                                     </button>
@@ -485,11 +502,11 @@ const Inventory = () => {
                         </div>
 
                         <button
-                            disabled={currentPage === totalPages}
+                            disabled={currentPage === totalPages || totalPages === 0}
                             onClick={() => setCurrentPage(p => p + 1)}
-                            className="p-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-100 shadow-sm"
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-blue-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
                         >
-                            <ChevronRight size={20} />
+                            <ChevronRight size={22} />
                         </button>
                     </div>
                 </div>

@@ -88,9 +88,13 @@ const LivrosPublic = () => {
                             <div className="h-64 bg-slate-50 relative overflow-hidden flex items-center justify-center p-8">
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent"></div>
 
-                                {/* Depth-Styled Book Placeholder */}
-                                <div className="w-32 h-44 bg-white shadow-[10px_10px_30px_rgba(0,0,0,0.1)] rounded-sm border-l-8 border-indigo-600 flex items-center justify-center transform group-hover:rotate-2 group-hover:scale-105 transition-all duration-500 relative z-10 group-hover:shadow-[20px_20px_50px_rgba(0,0,0,0.15)]">
-                                    <Book size={48} className="text-slate-100" />
+                                {/* Depth-Styled Book Placeholder / Cover */}
+                                <div className="w-32 h-44 bg-white shadow-[10px_10px_30px_rgba(0,0,0,0.1)] rounded-sm border-l-8 border-indigo-600 flex items-center justify-center transform group-hover:rotate-2 group-hover:scale-105 transition-all duration-500 relative z-10 overflow-hidden group-hover:shadow-[20px_20px_50px_rgba(0,0,0,0.15)]">
+                                    {livro.foto_path ? (
+                                        <img src={`/${livro.foto_path}`} alt="Capa" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Book size={48} className="text-slate-100" />
+                                    )}
                                 </div>
 
                                 {/* Floating Categoria Badge */}

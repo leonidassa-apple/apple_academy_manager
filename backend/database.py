@@ -102,7 +102,8 @@ def create_tables():
                           password VARCHAR(255) NOT NULL,
                           role VARCHAR(50) NOT NULL,
                           email VARCHAR(255),
-                          foto_path VARCHAR(255))""")
+                          foto_path VARCHAR(255),
+                          assinatura_path VARCHAR(255))""")
         
         # Tabela de alunos
         cursor.execute(f"""CREATE TABLE IF NOT EXISTS alunos
@@ -198,6 +199,7 @@ def create_tables():
                           edicao VARCHAR(50),
                           descricao TEXT,
                           foto_path VARCHAR(255),
+                          tags TEXT,
                           data_cadastro DATE DEFAULT (CURRENT_DATE))""")
 
         # Tabela de Exemplares
@@ -224,8 +226,10 @@ def create_tables():
                           observacao TEXT,
                           criado_por INT,
                           assinatura LONGTEXT,
+                          professor_id INT,
                           FOREIGN KEY (exemplar_id) REFERENCES exemplares (id),
-                          FOREIGN KEY (aluno_id) REFERENCES alunos (id))""")
+                          FOREIGN KEY (aluno_id) REFERENCES alunos (id),
+                          FOREIGN KEY (professor_id) REFERENCES users (id))""")
 
         # Tabela de Reservas
         cursor.execute(f"""CREATE TABLE IF NOT EXISTS reservas_livros
@@ -253,6 +257,18 @@ def create_tables():
                           sincronizado BOOLEAN DEFAULT FALSE,
                           data_criacao {TIMESTAMP_TYPE} DEFAULT CURRENT_TIMESTAMP,
                           FOREIGN KEY (criado_por) REFERENCES users (id) ON DELETE SET NULL)""")
+
+        # Tabela de Configuração de E-mail (SMTP)
+        cursor.execute(f"""CREATE TABLE IF NOT EXISTS email_config
+                         (id {AUTO_INC},
+                          mail_server VARCHAR(255) DEFAULT 'smtp.gmail.com',
+                          mail_port INT DEFAULT 587,
+                          mail_use_tls BOOLEAN DEFAULT TRUE,
+                          mail_username VARCHAR(255),
+                          mail_password VARCHAR(255),
+                          mail_default_sender VARCHAR(255),
+                          email_template_emprestimo TEXT,
+                          atualizado_em {TIMESTAMP_TYPE} DEFAULT CURRENT_TIMESTAMP)""")
 
         # Criar usuário admin padrão
         try:

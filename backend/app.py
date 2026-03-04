@@ -11,6 +11,7 @@ from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, date
 import os
+import time
 import shutil
 import pandas as pd
 from werkzeug.utils import secure_filename
@@ -53,9 +54,35 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', app.config[
 
 mail = Mail(app)
 
+def carregar_config_email_do_banco():
+    """Carrega (ou recarrega) as configurações de e-mail salvas no banco de dados."""
+    try:
+        conn = get_db_connection()
+        if not conn: return
+        cursor = get_db_cursor(conn)
+        cursor.execute("SELECT * FROM email_config ORDER BY id DESC LIMIT 1")
+        cfg = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if cfg:
+            if cfg.get('mail_server'):  app.config['MAIL_SERVER']  = cfg['mail_server']
+            if cfg.get('mail_port'):    app.config['MAIL_PORT']    = int(cfg['mail_port'])
+            if cfg.get('mail_use_tls') is not None: app.config['MAIL_USE_TLS'] = bool(cfg['mail_use_tls'])
+            if cfg.get('mail_username'): app.config['MAIL_USERNAME'] = cfg['mail_username']
+            if cfg.get('mail_password'): app.config['MAIL_PASSWORD'] = cfg['mail_password']
+            sender = cfg.get('mail_default_sender') or cfg.get('mail_username')
+            if sender: app.config['MAIL_DEFAULT_SENDER'] = sender
+            # Re-init mail com novas configurações
+            mail.init_app(app)
+    except Exception as e:
+        print(f"[email_config] Aviso: não foi possível carregar configs do banco: {e}")
+
 # Inicializar sistema de banco de dados
 load_dotenv()
 init_app(app)  # Esta linha agora deve funcionar
+
+# Carregar configurações de e-mail do banco (sobrescreve .env se houver entrada)
+carregar_config_email_do_banco()
 
 # Configuração de Segurança
 csrf = CSRFProtect(app)
@@ -237,12 +264,13 @@ def criar_pasta_uploads():
         os.makedirs(UPLOAD_FOLDER)
 
 class User(UserMixin):
-    def __init__(self, id, username, role, email=None, foto_path=None):
+    def __init__(self, id, username, role, email=None, foto_path=None, assinatura_path=None):
         self.id = id
         self.username = username
         self.role = role
         self.email = email
         self.foto_path = foto_path
+        self.assinatura_path = assinatura_path
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -257,7 +285,7 @@ def load_user(user_id):
         cursor.close()
         
         if user:
-            return User(user['id'], user['username'], user['role'], user.get('email'), user.get('foto_path'))
+            return User(user['id'], user['username'], user['role'], user.get('email'), user.get('foto_path'), user.get('assinatura_path'))
         return None
     except Exception as e:
         print(f"Erro ao carregar usuário: {e}")
@@ -479,6 +507,12 @@ def api_dashboard():
         concluidos_livros = fetch_one("SELECT COUNT(*) as total FROM emprestimos_livros WHERE status = 'Finalizado'")['total']
         total_concluidos = concluidos_devices + concluidos_livros
         
+        # Biblioteca Stats
+        total_livros = fetch_one("SELECT COUNT(*) as total FROM livros")['total']
+        total_exemplares = fetch_one("SELECT COUNT(*) as total FROM exemplares")['total']
+        livros_emprestados = fetch_one("SELECT COUNT(*) as total FROM emprestimos_livros WHERE status IN ('Ativo', 'Atrasado')")['total']
+        livros_disponiveis = total_exemplares - livros_emprestados
+        
         # Atividades Recentes (Unificado: Livros + Devices)
         cursor.execute('''
             (SELECT e.data_retirada, a.nome as aluno_nome, d.nome as item_nome, d.tipo as item_tipo, 'Device' as categoria
@@ -560,6 +594,31 @@ def api_dashboard():
                  item['data_vencimento'] = r['data_vencimento'].strftime('%d/%m/%Y')
             alertas_lista.append(item)
 
+        # Proximos Eventos da Agenda
+        cursor.execute('''
+            SELECT e.*, u.username as criado_por_nome
+            FROM eventos e
+            LEFT JOIN users u ON e.criado_por = u.id
+            WHERE e.data_inicio >= NOW()
+            ORDER BY e.data_inicio ASC
+            LIMIT 5
+        ''')
+        raw_eventos = cursor.fetchall()
+        eventos_proximos = []
+        for ev in raw_eventos:
+            e = ev if isinstance(ev, dict) else {
+                'id': ev[0], 'titulo': ev[1], 'descricao': ev[2], 
+                'data_inicio': ev[3], 'data_fim': ev[4], 'local': ev[5],
+                'tipo': ev[6], 'participantes': ev[7], 'cor': ev[8],
+                'criado_por': ev[9], 'data_criacao': ev[10], 'sincronizado': ev[11],
+                'criado_por_nome': ev[12]
+            }
+            if e.get('data_inicio') and hasattr(e['data_inicio'], 'isoformat'):
+                e['data_inicio'] = e['data_inicio'].isoformat()
+            if e.get('data_fim') and hasattr(e['data_fim'], 'isoformat'):
+                e['data_fim'] = e['data_fim'].isoformat()
+            eventos_proximos.append(e)
+
         # For brevity, returning simplified stats structure
         stats = {
             'alunos': {
@@ -576,6 +635,12 @@ def api_dashboard():
                 'regular': devices_regular,
                 'foundation': devices_foundation
             },
+            'biblioteca': {
+                'total_livros': total_livros,
+                'total_exemplares': total_exemplares,
+                'emprestados': livros_emprestados,
+                'disponiveis': livros_disponiveis
+            },
             'concluidos': total_concluidos,
             'recent_activity': recent_activity,
             'alertas': {
@@ -583,7 +648,8 @@ def api_dashboard():
                 'vencendo_hoje': vencendo_hoje_livros + vencendo_hoje_devices,
                 'vencendo_breve': vencendo_breve_livros + vencendo_breve_devices,
                 'lista': alertas_lista
-            }
+            },
+            'proximos_eventos': eventos_proximos
         }
         
         cursor.close()
@@ -4250,12 +4316,13 @@ def api_listar_emprestimos_livros():
         # Carregar empréstimos ativos e atrasados
         cursor.execute('''
             SELECT el.id, el.aluno_id, el.exemplar_id, el.data_retirada, el.data_previsao_devolucao, el.status,
-                   l.titulo, l.autor, e.codigo_barras, a.nome as aluno_nome
+                   l.titulo, l.autor, e.codigo_barras, a.nome as aluno_nome, u.username as professor_nome
             FROM emprestimos_livros el
             JOIN exemplares e ON el.exemplar_id = e.id
             JOIN livros l ON e.livro_id = l.id
             JOIN alunos a ON el.aluno_id = a.id
-            WHERE el.status IN ('Ativo', 'Atrasado')
+            LEFT JOIN users u ON el.professor_id = u.id
+            WHERE el.status IN ('Ativo', 'Atrasado', 'Devolvido')
             ORDER BY el.data_retirada DESC
         ''')
         emprestimos = cursor.fetchall()
@@ -4273,12 +4340,68 @@ def api_listar_emprestimos_livros():
                 'titulo': emp['titulo'],
                 'autor': emp['autor'],
                 'codigo_barras': emp['codigo_barras'],
-                'aluno_nome': emp['aluno_nome']
+                'aluno_nome': emp['aluno_nome'],
+                'professor_nome': emp['professor_nome']
             })
             
         return jsonify({'success': True, 'data': emprestimos_list})
         
     except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/user/perfil', methods=['POST'])
+@csrf.exempt
+@login_required
+def atualizar_perfil():
+    """Update current user profile"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Erro de conexão!'}), 500
+    
+    try:
+        data = request.form
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+        
+        cursor = get_db_cursor(conn)
+        
+        # Build update
+        updates = []
+        params = []
+        
+        if email:
+            updates.append("email = %s")
+            params.append(email)
+            
+        if password:
+            updates.append("password = %s")
+            params.append(generate_password_hash(password))
+            
+        # Handle signature (assinatura)
+        if 'assinatura' in request.files:
+            file = request.files['assinatura']
+            if file and file.filename != '':
+                filename = secure_filename(f"sign_{current_user.id}_{int(time.time())}_{file.filename}")
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                assinatura_path = f"uploads/{filename}"
+                updates.append("assinatura_path = %s")
+                params.append(assinatura_path)
+
+        if not updates:
+            return jsonify({'success': False, 'message': 'Nenhum dado para atualizar'}), 400
+            
+        params.append(current_user.id)
+        cursor.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = %s", tuple(params))
+        
+        conn.commit()
+        cursor.close()
+        
+        return jsonify({'success': True, 'message': 'Perfil atualizado com sucesso!'})
+        
+    except Exception as e:
+        conn.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         if conn: conn.close()
@@ -4294,15 +4417,13 @@ def criar_emprestimo_livro():
     
     try:
             data = request.json
-            print(f"DEBUG: criando emprestimo livro - data keys: {list(data.keys()) if data else 'None'}")
             aluno_id = data.get('aluno_id')
             codigo_barras = data.get('codigo_barras', '').strip()
-            data_retirada_str = data.get('data_retirada') # Nova data customizada
+            data_retirada_str = data.get('data_retirada')
             
             if not aluno_id or not codigo_barras:
                 return jsonify({'success': False, 'message': 'Dados incompletos!'})
 
-            # Validar e processar data de retirada
             try:
                 if data_retirada_str:
                     data_retirada = datetime.strptime(data_retirada_str, '%Y-%m-%d').date()
@@ -4313,8 +4434,7 @@ def criar_emprestimo_livro():
 
             data_previsao = data_retirada + timedelta(days=14)
             
-            # Buscar exemplar
-            cursor = get_db_cursor(conn) # Moved cursor creation here
+            cursor = get_db_cursor(conn)
             cursor.execute("SELECT id, status, livro_id FROM exemplares WHERE codigo_barras = %s", (codigo_barras,))
             exemplar = cursor.fetchone()
             
@@ -4324,16 +4444,67 @@ def criar_emprestimo_livro():
             if exemplar['status'] != 'Disponível':
                 return jsonify({'success': False, 'message': f"Exemplar indisponível (Status: {exemplar['status']})"})
 
-            # Registrar empréstimo (Atualizado com criado_por, assinatura, observacao e data customizada)
+            # Registrar empréstimo
+            # professor_id: If current user is professor, use their ID. Else use selected mentor if provided.
+            professor_id = current_user.id if current_user.role == 'professor' else data.get('professor_id')
+
             cursor.execute('''
-                INSERT INTO emprestimos_livros (aluno_id, exemplar_id, data_retirada, data_previsao_devolucao, status, criado_por, assinatura, observacao)
-                VALUES (%s, %s, %s, %s, 'Ativo', %s, %s, %s)
-            ''', (aluno_id, exemplar['id'], data_retirada, data_previsao, current_user.id, data.get('assinatura'), data.get('observacao')))
+                INSERT INTO emprestimos_livros (aluno_id, exemplar_id, data_retirada, data_previsao_devolucao, status, criado_por, assinatura, observacao, professor_id)
+                VALUES (%s, %s, %s, %s, 'Ativo', %s, %s, %s, %s)
+            ''', (aluno_id, exemplar['id'], data_retirada, data_previsao, current_user.id, data.get('assinatura'), data.get('observacao'), professor_id))
             
-            # Atualizar status do exemplar
             cursor.execute("UPDATE exemplares SET status = 'Emprestado' WHERE id = %s", (exemplar['id'],))
             
+            # Buscar dados do aluno e livro para o email
+            cursor.execute("SELECT nome, email FROM alunos WHERE id = %s", (aluno_id,))
+            aluno = cursor.fetchone()
+            
+            cursor.execute("SELECT titulo FROM livros WHERE id = %s", (exemplar['livro_id'],))
+            livro = cursor.fetchone()
+            
             conn.commit()
+            
+            # Enviar e-mail de notificação para o aluno
+            if aluno and aluno.get('email') and livro:
+                try:
+                    from flask_mail import Message
+
+                    # Buscar template personalizado
+                    template_cursor = get_db_cursor(conn)
+                    template_cursor.execute("SELECT email_template_emprestimo FROM email_config ORDER BY id DESC LIMIT 1")
+                    tmpl_row = template_cursor.fetchone()
+                    template_cursor.close()
+
+                    template = (tmpl_row['email_template_emprestimo'] if tmpl_row and tmpl_row['email_template_emprestimo'] else None)
+
+                    # Variáveis disponíveis para o template
+                    data_fmt = data_retirada.strftime('%d/%m/%Y')
+                    responsavel_nome = current_user.username
+
+                    if template:
+                        corpo = (template
+                                 .replace('{aluno}', aluno['nome'])
+                                 .replace('{item}', livro['titulo'])
+                                 .replace('{data}', data_fmt)
+                                 .replace('{responsavel}', responsavel_nome)
+                                 .replace('{data_devolucao}', data_previsao.strftime('%d/%m/%Y')))
+                    else:
+                        corpo = (
+                            f"Olá, {aluno['nome']}!\n\n"
+                            f"Esse é o e-mail automático de confirmação do empréstimo do livro '{livro['titulo']}', "
+                            f"no dia {data_fmt}, autorizado por {responsavel_nome}.\n\n"
+                            f"A devolução está prevista para {data_previsao.strftime('%d/%m/%Y')}.\n\n"
+                            "Caso você não tenha feito esse empréstimo, contate imediatamente a equipe de TI ou mentores.\n\n"
+                            "Apple Academy Manager"
+                        )
+
+                    msg = Message("Confirmação de Empréstimo de Livro", recipients=[aluno['email']])
+                    msg.body = corpo
+                    mail.send(msg)
+                except Exception as e:
+                    print(f"Erro ao enviar email de confirmação para aluno: {e}")
+
+            
             return jsonify({'success': True, 'message': 'Empréstimo realizado com sucesso!'})
         
     except Exception as e:
@@ -4799,36 +4970,56 @@ def enviar_alerta_atraso():
     
     try:
         cursor = get_db_cursor(conn)
-        # Buscar empréstimos atrasados do professor logado
+        from datetime import datetime, timedelta
+        hoje = datetime.now().date()
+        tres_dias = hoje + timedelta(days=3)
+        
+        # Buscar empréstimos atrasados ou vencendo em até 3 dias do professor logado
         cursor.execute('''
-            SELECT el.*, l.titulo, a.nome as aluno_nome, el.data_previsao_devolucao
+            SELECT el.*, l.titulo, a.nome as aluno_nome, a.email, el.data_previsao_devolucao
             FROM emprestimos_livros el
             JOIN exemplares e ON el.exemplar_id = e.id
             JOIN livros l ON e.livro_id = l.id
             JOIN alunos a ON el.aluno_id = a.id
-            WHERE el.status = 'Atrasado' AND el.criado_por = %s
-        ''', (current_user.id,))
+            WHERE el.status IN ('Atrasado', 'Ativo') 
+              AND el.criado_por = %s
+              AND el.data_previsao_devolucao <= %s
+        ''', (current_user.id, tres_dias))
         atrasos = cursor.fetchall()
         
         if not atrasos:
             return jsonify({'success': False, 'message': 'Não há empréstimos atrasados para reportar.'})
             
-        # Construir corpo do e-mail
+        # Construir corpo do e-mail para o admin/professor
+        from flask_mail import Message
         html_body = f"<h2>Relatório de Atrasos - {current_user.username}</h2>"
-        html_body += "<p>Os seguintes livros sob sua responsabilidade estão atrasados:</p><ul>"
+        html_body += "<p>Os seguintes livros sob sua responsabilidade estão atrasados ou próximos de vencer:</p><ul>"
         
         for item in atrasos:
             data_prev = item['data_previsao_devolucao'].strftime('%d/%m/%Y') if item['data_previsao_devolucao'] else 'N/A'
             html_body += f"<li><strong>Aluno:</strong> {item['aluno_nome']} | <strong>Livro:</strong> {item['titulo']} | <strong>Vencimento:</strong> {data_prev}</li>"
             
+            # Notificar o aluno diretamente se ele tiver email
+            if item.get('email'):
+                try:
+                    msg_aluno = Message("Aviso de Vencimento de Empréstimo", recipients=[item['email']])
+                    msg_aluno.body = (f"Olá {item['aluno_nome']},\n\n"
+                                      f"Lembramos que o empréstimo do livro '{item['titulo']}' "
+                                      f"tem data de devolução para {data_prev}.\n"
+                                      "Por favor, renove ou devolva o exemplar para evitar atrasos constantes.\n\n"
+                                      "Obrigado!")
+                    mail.send(msg_aluno)
+                except Exception as e:
+                    print(f"Erro ao enviar email para aluno {item['aluno_nome']}: {e}")
+            
         html_body += "</ul><br><p>Sistema Apple Academy Manager</p>"
         
-        msg = Message("Alerta de Livros Atrasados", recipients=[current_user.email])
+        msg = Message("Alerta de Livros Atrasados/Próximos", recipients=[current_user.email])
         msg.html = html_body
         
         mail.send(msg)
         
-        return jsonify({'success': True, 'message': f'Relatório enviado para {current_user.email}!'})
+        return jsonify({'success': True, 'message': f'Relatório enviado para {current_user.email} e alunos notificados!'})
         
     except Exception as e:
         print(f"Erro ao enviar e-mail: {e}")
@@ -4934,50 +5125,77 @@ def api_livros():
             })
 
         elif request.method == 'POST':
-            if current_user.role != 'admin':
+            if current_user.role not in ['admin', 'professor']:
                 return jsonify({'success': False, 'message': 'Não autorizado'}), 403
             
-            data = request.form # Form data para suportar upload de imagem no futuro
-            titulo = data.get('titulo')
-            autor = data.get('autor')
-            isbn = data.get('isbn')
-            categoria = data.get('categoria')
-            
-            if not titulo or not autor:
-                return jsonify({'success': False, 'message': 'Título e Autor são obrigatórios'}), 400
+            try:
+                data = request.form # Form data para suportar upload de imagem
+                titulo = data.get('titulo')
+                autor = data.get('autor')
+                isbn = data.get('isbn')
+                categoria = data.get('categoria')
+                tags = data.get('tags', '')
                 
-            cursor.execute('''
-                INSERT INTO livros (titulo, autor, isbn, categoria, ano, editora, edicao, descricao)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (titulo, autor, isbn, categoria, data.get('ano'), data.get('editora'), data.get('edicao'), data.get('descricao')))
-            conn.commit()
-            return jsonify({'success': True, 'message': 'Livro cadastrado com sucesso!'})
+                if not titulo or not autor:
+                    return jsonify({'success': False, 'message': 'Título e Autor são obrigatórios'}), 400
+                
+                foto_path = None
+                if 'foto' in request.files:
+                    file = request.files['foto']
+                    if file and file.filename != '':
+                        filename = secure_filename(f"capa_{int(time.time())}_{file.filename}")
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                        foto_path = f"uploads/{filename}"
+
+                cursor.execute('''
+                    INSERT INTO livros (titulo, autor, isbn, categoria, ano, editora, edicao, descricao, tags, foto_path)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (titulo, autor, isbn, categoria, data.get('ano'), data.get('editora'), data.get('edicao'), data.get('descricao'), tags, foto_path))
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Livro cadastrado com sucesso!'})
+            except Exception as e:
+                import traceback
+                print(f"ERRO AO SALVAR LIVRO:\n{traceback.format_exc()}", flush=True)
+                return jsonify({'success': False, 'message': f'Erro interno: {str(e)}'}), 500
 
         elif request.method == 'PUT':
-            if current_user.role != 'admin':
+            if current_user.role not in ['admin', 'professor']:
                 return jsonify({'success': False, 'message': 'Não autorizado'}), 403
             
             data = request.form
             livro_id = data.get('id')
             titulo = data.get('titulo')
             autor = data.get('autor')
+            tags = data.get('tags', '')
             
             if not livro_id:
                 return jsonify({'success': False, 'message': 'ID do livro é obrigatório'}), 400
             if not titulo or not autor:
                 return jsonify({'success': False, 'message': 'Título e Autor são obrigatórios'}), 400
 
-            cursor.execute('''
+            # Handle photo update
+            foto_sql = ""
+            foto_params = []
+            if 'foto' in request.files:
+                file = request.files['foto']
+                if file and file.filename != '':
+                    filename = secure_filename(f"capa_{int(time.time())}_{file.filename}")
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    foto_path = f"uploads/{filename}"
+                    foto_sql = ", foto_path=%s"
+                    foto_params = [foto_path]
+
+            cursor.execute(f'''
                 UPDATE livros 
-                SET titulo=%s, autor=%s, isbn=%s, categoria=%s, ano=%s, editora=%s, edicao=%s, descricao=%s
+                SET titulo=%s, autor=%s, isbn=%s, categoria=%s, ano=%s, editora=%s, edicao=%s, descricao=%s, tags=%s {foto_sql}
                 WHERE id=%s
-            ''', (titulo, autor, data.get('isbn'), data.get('categoria'), data.get('ano'), 
-                  data.get('editora'), data.get('edicao'), data.get('descricao'), livro_id))
+            ''', [titulo, autor, data.get('isbn'), data.get('categoria'), data.get('ano'), 
+                  data.get('editora'), data.get('edicao'), data.get('descricao'), tags] + foto_params + [livro_id])
             conn.commit()
             return jsonify({'success': True, 'message': 'Livro atualizado com sucesso!'})
 
         elif request.method == 'DELETE':
-            if current_user.role != 'admin':
+            if current_user.role not in ['admin', 'professor']:
                 return jsonify({'success': False, 'message': 'Não autorizado'}), 403
             
             livro_id = request.args.get('id')
@@ -5011,7 +5229,7 @@ def api_exemplares():
         cursor = get_db_cursor(conn)
         
         if request.method == 'POST':
-            if current_user.role != 'admin': return jsonify({'success': False}), 403
+            if current_user.role not in ['admin', 'professor']: return jsonify({'success': False}), 403
             data = request.get_json()
             
             livro_id = data.get('livro_id')
@@ -5034,7 +5252,7 @@ def api_exemplares():
             return jsonify({'success': True, 'data': cursor.fetchall()})
 
         elif request.method == 'PUT':
-            if current_user.role != 'admin': return jsonify({'success': False}), 403
+            if current_user.role not in ['admin', 'professor']: return jsonify({'success': False}), 403
             data = request.get_json()
             exemplar_id = data.get('id')
             
@@ -5067,7 +5285,7 @@ def api_exemplares():
             return jsonify({'success': True, 'message': 'Exemplar atualizado!'})
 
         elif request.method == 'DELETE':
-            if current_user.role != 'admin': return jsonify({'success': False}), 403
+            if current_user.role not in ['admin', 'professor']: return jsonify({'success': False}), 403
             exemplar_id = request.args.get('id')
             
             try:
@@ -5558,6 +5776,143 @@ def upload_user_foto(user_id):
         return jsonify({'success': False, 'message': f'Erro ao salvar foto: {str(e)}'}), 500
     finally:
         if conn: conn.close()
+
+
+# =============================================================================
+# ADMIN - CONFIGURAÇÃO DE E-MAIL SMTP
+# =============================================================================
+
+@app.route('/api/admin/email-config', methods=['GET'])
+@login_required
+def get_email_config():
+    """Retorna as configurações de e-mail atuais (sem expor a senha)"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acesso negado.'}), 403
+    conn = get_db_connection()
+    if not conn: return jsonify({'success': False}), 500
+    try:
+        cursor = get_db_cursor(conn)
+        cursor.execute(
+            "SELECT id, mail_server, mail_port, mail_use_tls, mail_username, mail_default_sender, atualizado_em, mail_password, email_template_emprestimo FROM email_config ORDER BY id DESC LIMIT 1"
+        )
+        row = cursor.fetchone()
+        cursor.close()
+        if row:
+            cfg = dict(row) if not isinstance(row, dict) else row.copy()
+            cfg['has_password'] = bool(cfg.get('mail_password'))
+            cfg.pop('mail_password', None)
+            if cfg.get('atualizado_em') and hasattr(cfg['atualizado_em'], 'isoformat'):
+                cfg['atualizado_em'] = cfg['atualizado_em'].isoformat()
+            return jsonify({'success': True, 'data': cfg})
+        # Nenhuma config salva: retorna defaults do .env
+        return jsonify({'success': True, 'data': {
+            'mail_server': app.config.get('MAIL_SERVER', 'smtp.gmail.com'),
+            'mail_port': app.config.get('MAIL_PORT', 587),
+            'mail_use_tls': app.config.get('MAIL_USE_TLS', True),
+            'mail_username': app.config.get('MAIL_USERNAME') or '',
+            'mail_default_sender': app.config.get('MAIL_DEFAULT_SENDER') or '',
+            'has_password': bool(app.config.get('MAIL_PASSWORD')),
+            'email_template_emprestimo': '',
+            'atualizado_em': None
+        }})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+
+@app.route('/api/admin/email-config', methods=['POST'])
+@csrf.exempt
+@login_required
+def salvar_email_config():
+    """Salva/atualiza as configurações de e-mail SMTP no banco"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acesso negado.'}), 403
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Dados inválidos.'}), 400
+
+    mail_server   = data.get('mail_server', 'smtp.gmail.com').strip()
+    mail_port     = int(data.get('mail_port', 587))
+    mail_use_tls  = bool(data.get('mail_use_tls', True))
+    mail_username = data.get('mail_username', '').strip()
+    mail_password = data.get('mail_password', '').strip()
+    mail_sender   = data.get('mail_default_sender', '').strip() or mail_username
+    email_template = data.get('email_template_emprestimo', '').strip()
+
+    if not mail_username:
+        return jsonify({'success': False, 'message': 'Usuário SMTP (e-mail) é obrigatório.'}), 400
+
+    conn = get_db_connection()
+    if not conn: return jsonify({'success': False}), 500
+    try:
+        cursor = get_db_cursor(conn)
+        cursor.execute("SELECT id, mail_password FROM email_config ORDER BY id DESC LIMIT 1")
+        existing = cursor.fetchone()
+
+        if existing:
+            existing_id = existing['id'] if isinstance(existing, dict) else existing[0]
+            old_password = existing['mail_password'] if isinstance(existing, dict) else existing[1]
+            password_to_save = mail_password if mail_password else old_password
+            cursor.execute('''
+                UPDATE email_config
+                SET mail_server=%s, mail_port=%s, mail_use_tls=%s,
+                    mail_username=%s, mail_password=%s, mail_default_sender=%s,
+                    email_template_emprestimo=%s,
+                    atualizado_em=CURRENT_TIMESTAMP
+                WHERE id=%s
+            ''', (mail_server, mail_port, mail_use_tls, mail_username, password_to_save, mail_sender, email_template, existing_id))
+        else:
+            if not mail_password:
+                return jsonify({'success': False, 'message': 'Senha SMTP obrigatória no primeiro cadastro.'}), 400
+            cursor.execute('''
+                INSERT INTO email_config (mail_server, mail_port, mail_use_tls, mail_username, mail_password, mail_default_sender, email_template_emprestimo)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''', (mail_server, mail_port, mail_use_tls, mail_username, mail_password, mail_sender, email_template))
+
+        conn.commit()
+        cursor.close()
+
+        # Aplicar imediatamente sem reiniciar o servidor
+        app.config['MAIL_SERVER']         = mail_server
+        app.config['MAIL_PORT']           = mail_port
+        app.config['MAIL_USE_TLS']        = mail_use_tls
+        app.config['MAIL_USERNAME']       = mail_username
+        if mail_password:
+            app.config['MAIL_PASSWORD']   = mail_password
+        app.config['MAIL_DEFAULT_SENDER'] = mail_sender
+        mail.init_app(app)
+
+        return jsonify({'success': True, 'message': 'Configurações de e-mail salvas e aplicadas com sucesso!'})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+
+@app.route('/api/admin/email-config/testar', methods=['POST'])
+@csrf.exempt
+@login_required
+def testar_email_config():
+    """Envia um e-mail de teste para validar a configuração SMTP"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acesso negado.'}), 403
+    try:
+        dest = app.config.get('MAIL_DEFAULT_SENDER') or app.config.get('MAIL_USERNAME')
+        if not dest:
+            return jsonify({'success': False, 'message': 'Nenhum e-mail remetente configurado.'})
+        msg = Message('✅ Teste de E-mail — Apple Academy Manager', recipients=[dest])
+        msg.body = (
+            'Olá!\n\n'
+            'Este é um e-mail de teste enviado pelo sistema Apple Academy Manager.\n'
+            'Se você recebeu esta mensagem, a configuração SMTP está correta.\n\n'
+            'Sistema Apple Academy Manager'
+        )
+        mail.send(msg)
+        return jsonify({'success': True, 'message': f'E-mail de teste enviado para {dest}!'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Falha ao enviar: {str(e)}'})
 
 
 if __name__ == '__main__':

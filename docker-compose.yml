@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   backend:
     build:
@@ -9,7 +7,7 @@ services:
     restart: always
     environment:
       - DB_TYPE=mysql
-      - DB_HOST=db
+      - DB_HOST=host.docker.internal
       - DB_USER=root
       - DB_PASSWORD=Academy2024#@!
       - DB_NAME=apple_academy
@@ -18,8 +16,8 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./backend:/app/backend
-    depends_on:
-      - db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   client:
     build:
@@ -32,16 +30,3 @@ services:
     depends_on:
       - backend
 
-  db:
-    image: mysql:8.0
-    container_name: apple_academy_manager-db-1
-    command: --default-authentication-plugin=mysql_native_password
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: Academy2024#@!
-      MYSQL_DATABASE: apple_academy
-    volumes:
-      - db_data:/var/lib/mysql
-
-volumes:
-  db_data:

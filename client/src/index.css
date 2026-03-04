@@ -1,1 +1,80 @@
 @import "tailwindcss";
+
+@theme {
+    --color-brand-primary: #2563eb;
+    --color-brand-secondary: #4f46e5;
+    --color-app-bg: #f8fafc;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: #0f172a;
+    /* text-slate-900 */
+    background-color: #f8fafc;
+    -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+    background-color: #dbeafe;
+    /* blue-100 */
+    color: #1d4ed8;
+    /* blue-700 */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    /* slate-200 */
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+    /* slate-300 */
+}
+
+/* Premium Utilities */
+.premium-shadow {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05), 0 5px 15px -5px rgba(0, 0, 0, 0.03);
+}
+
+.premium-card {
+    @apply bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300;
+}
+
+.premium-btn-primary {
+    @apply px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl hover:from-blue-700 hover:to-indigo-800 transition-all font-black text-sm shadow-xl shadow-blue-200 active:scale-95 flex items-center gap-2;
+}
+
+.premium-btn-secondary {
+    @apply px-6 py-4 bg-white border border-slate-200 rounded-2xl text-slate-600 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95 flex items-center gap-2;
+}
+
+.status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border shadow-sm;
+}
+
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+}

@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, CheckCircle, AlertTriangle, Barcode, Mail, BookOpen, Clock, Calendar, SearchX, User, ChevronRight, RefreshCw, Filter } from 'lucide-react';
+import { Plus, Search, CheckCircle, AlertTriangle, Barcode, Mail, BookOpen, Clock, Calendar, SearchX, User, ChevronRight, RefreshCw, Filter, ChevronLeft, Smartphone } from 'lucide-react';
 import BookLoanModal from '../components/BookLoanModal';
+import QRScannerModal from '../components/QRScannerModal';
 
 const EmprestimosLivros = () => {
     const [emprestimos, setEmprestimos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
 
     useEffect(() => {
         fetchEmprestimos();
@@ -48,7 +54,7 @@ const EmprestimosLivros = () => {
     };
 
     const handleEnviarAlerta = async () => {
-        if (!window.confirm('Deseja enviar e-mail com relatório de atrasos para você?')) return;
+        if (!window.confirm('Deseja enviar e-mail de notificação aos alunos e um relatório para você?')) return;
         try {
             const response = await fetch('/api/enviar-alerta-atraso', { method: 'POST' });
             const data = await response.json();
@@ -59,11 +65,19 @@ const EmprestimosLivros = () => {
         }
     };
 
+    const handleScanSuccess = (decodedText) => {
+        setSearchTerm(decodedText);
+        setIsScannerOpen(false);
+    };
+
     const filteredEmprestimos = emprestimos.filter(emp =>
         emp.aluno_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.codigo_barras?.includes(searchTerm)
     );
+
+    const totalPages = Math.ceil(filteredEmprestimos.length / itemsPerPage);
+    const paginatedEmprestimos = filteredEmprestimos.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="w-full mx-auto animate-in fade-in duration-700">
@@ -90,7 +104,7 @@ const EmprestimosLivros = () => {
                         className="flex items-center gap-2 px-6 py-4 bg-white border border-slate-200 rounded-2xl text-slate-600 font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95"
                     >
                         <Mail size={18} className="text-slate-400" />
-                        Relatório de Atrasos
+                        Notificar Vencimentos
                     </button>
                     <button
                         onClick={() => setIsModalOpen(true)}
@@ -151,6 +165,13 @@ const EmprestimosLivros = () => {
                 </div>
                 <div className="flex items-center gap-3">
                     <button
+                        onClick={() => setIsScannerOpen(true)}
+                        className="p-4 bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 rounded-2xl transition-all"
+                        title="Escanear Código"
+                    >
+                        <Smartphone size={22} />
+                    </button>
+                    <button
                         onClick={fetchEmprestimos}
                         className="p-4 bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 rounded-2xl transition-all"
                         title="Atualizar Lista"
@@ -172,6 +193,7 @@ const EmprestimosLivros = () => {
                             <tr className="bg-slate-50/50 border-b border-slate-100">
                                 <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Estudante / Leitor</th>
                                 <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Obra / Exemplar</th>
+                                <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Mentor / Resp.</th>
                                 <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Período</th>
                                 <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em]">Situação</th>
                                 <th className="px-6 py-5 font-black text-slate-400 text-[10px] uppercase tracking-[0.2em] text-right">Ações</th>
@@ -181,12 +203,12 @@ const EmprestimosLivros = () => {
                             {loading && emprestimos.length === 0 ? (
                                 Array(5).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan="5" className="px-8 py-10"><div className="h-10 bg-slate-50 rounded-2xl w-full"></div></td>
+                                        <td colSpan="6" className="px-8 py-10"><div className="h-10 bg-slate-50 rounded-2xl w-full"></div></td>
                                     </tr>
                                 ))
                             ) : filteredEmprestimos.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="px-8 py-32 text-center">
+                                    <td colSpan="6" className="px-8 py-32 text-center">
                                         <div className="flex flex-col items-center justify-center">
                                             <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
                                                 <SearchX size={48} strokeWidth={1} className="text-slate-300" />
@@ -197,7 +219,7 @@ const EmprestimosLivros = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredEmprestimos.map((emp) => (
+                                paginatedEmprestimos.map((emp) => (
                                     <tr key={emp.id} className="hover:bg-indigo-50/20 transition-all group">
                                         <td className="px-6 py-6 whitespace-nowrap">
                                             <div className="flex items-center gap-4">
@@ -227,6 +249,12 @@ const EmprestimosLivros = () => {
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase font-mono tracking-tighter">{emp.codigo_barras}</p>
                                                     </div>
                                                 </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="flex items-center gap-2">
+                                                <User size={16} className="text-slate-400" />
+                                                <p className="text-sm font-medium text-slate-700">{emp.professor_nome || 'N/A'}</p>
                                             </div>
                                         </td>
                                         <td className="px-6 py-6">
@@ -289,6 +317,68 @@ const EmprestimosLivros = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Modern Pagination Area - Standardized Premium Style */}
+                <div className="mt-auto px-8 py-6 border-t border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                            Mostrando <span className="text-indigo-600 px-1">{filteredEmprestimos.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} — {Math.min(currentPage * itemsPerPage, filteredEmprestimos.length)}</span> de <span className="text-slate-900">{filteredEmprestimos.length}</span> registros
+                        </div>
+                        <div className="relative group min-w-[140px]">
+                            <select
+                                className="w-full pl-5 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 uppercase tracking-widest outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 cursor-pointer appearance-none transition-all shadow-sm group-hover:border-indigo-200"
+                                value={itemsPerPage}
+                                onChange={(e) => {
+                                    setItemsPerPage(parseInt(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <option value={10}>Exibir 10</option>
+                                <option value={20}>Exibir 20</option>
+                                <option value={50}>Exibir 50</option>
+                            </select>
+                            <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-indigo-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
+                        >
+                            <ChevronLeft size={22} />
+                        </button>
+
+                        <div className="flex items-center gap-2 mx-3">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) pageNum = i + 1;
+                                else if (currentPage <= 3) pageNum = i + 1;
+                                else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                else pageNum = currentPage - 2 + i;
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`w-12 h-12 rounded-[1.25rem] font-black text-sm transition-all shadow-sm ${currentPage === pageNum ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-100 scale-110' : 'bg-white hover:bg-indigo-50 text-slate-500 border border-slate-100 hover:border-indigo-200'}`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-indigo-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
+                        >
+                            <ChevronRight size={22} />
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {isModalOpen && (
@@ -301,6 +391,12 @@ const EmprestimosLivros = () => {
                     }}
                 />
             )}
+
+            <QRScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScanSuccess={handleScanSuccess}
+            />
         </div>
     );
 };

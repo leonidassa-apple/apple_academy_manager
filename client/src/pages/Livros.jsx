@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, BookOpen, Edit, Trash2, Layers, Barcode, X, CheckCircle, Smartphone, RefreshCw, SearchX } from 'lucide-react';
 import LivroModal from '../components/LivroModal';
 import ExemplarModal from '../components/ExemplarModal';
+import QRScannerModal from '../components/QRScannerModal';
+import QRDisplayModal from '../components/QRDisplayModal';
+import { ChevronLeft, ChevronRight, QrCode } from 'lucide-react';
 
 const Livros = () => {
     const [livros, setLivros] = useState([]);
@@ -26,6 +29,10 @@ const Livros = () => {
     const [selectedExemplar, setSelectedExemplar] = useState(null);
     const [isExemplarModalOpen, setIsExemplarModalOpen] = useState(false);
     const [viewingExemplaresFor, setViewingExemplaresFor] = useState(null);
+
+    // QR Scanner state
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [qrData, setQrData] = useState(null); // {data: string, title: string}
 
     useEffect(() => {
         fetchLivros();
@@ -179,6 +186,14 @@ const Livros = () => {
         }
     };
 
+    const handleScanSuccess = (decodedText) => {
+        setSearchTerm(decodedText);
+        setIsScannerOpen(false);
+        setCurrentPage(1);
+    };
+
+    const totalLivros = summaryStats.total_titulos || 0;
+
 
     return (
         <div className="p-6 max-w-[1700px] mx-auto animate-in fade-in duration-700">
@@ -273,6 +288,13 @@ const Livros = () => {
                         </div>
                         <div className="flex gap-2">
                             <button
+                                onClick={() => setIsScannerOpen(true)}
+                                className="p-4 bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 rounded-2xl transition-all shadow-sm group"
+                                title="Escanear QR Code / Código de Barras"
+                            >
+                                <Smartphone size={20} className="group-hover:scale-110 transition-transform" />
+                            </button>
+                            <button
                                 onClick={() => {
                                     setCurrentPage(1);
                                     fetchLivros();
@@ -320,14 +342,26 @@ const Livros = () => {
                                         <tr key={livro.id} className={`hover:bg-indigo-50/20 transition-all group ${viewingExemplaresFor?.id === livro.id ? 'bg-indigo-50/40' : ''}`}>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="p-3 bg-white border border-slate-100 rounded-xl group-hover:scale-110 transition-transform shadow-sm">
-                                                        <BookOpen size={20} className="text-indigo-600" />
+                                                    <div className="w-12 h-16 bg-slate-50 border border-slate-100 rounded-lg overflow-hidden shrink-0 shadow-sm relative group-hover:scale-105 transition-transform">
+                                                        {livro.foto_path ? (
+                                                            <img src={`/${livro.foto_path}`} alt="Capa" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center bg-slate-100 italic text-[10px] text-slate-300">N/A</div>
+                                                        )}
+                                                    </div>
+                                                    <div className="p-2 bg-white border border-slate-100 rounded-xl hidden md:flex items-center justify-center shadow-sm">
+                                                        <BookOpen size={16} className="text-indigo-600" />
                                                     </div>
                                                     <div>
                                                         <p className="font-black text-slate-900 text-base leading-tight group-hover:text-indigo-600 transition-colors uppercase tracking-tight truncate max-w-[200px]" title={livro.titulo}>
                                                             {livro.titulo}
                                                         </p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 tracking-wider">{livro.autor}</p>
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 px-1.5 py-0.5 rounded-md">{livro.autor}</p>
+                                                            {livro.tags && livro.tags.split(',').map((tag, idx) => (
+                                                                <span key={idx} className="text-[9px] font-black text-indigo-500/70 uppercase tracking-widest bg-indigo-50 px-1.5 py-0.5 rounded-md">{tag.trim()}</span>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -386,25 +420,59 @@ const Livros = () => {
                         </table>
                     </div>
 
-                    {/* Pagination Controls */}
-                    <div className="p-6 border-t border-slate-50 bg-slate-50/10 flex justify-between items-center">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            Página {currentPage} de {totalPages}
-                        </p>
-                        <div className="flex gap-2">
+                    {/* Modern Pagination Area - Standardized Premium Style */}
+                    <div className="mt-auto px-8 py-6 border-t border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
+                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                            <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Mostrando <span className="text-indigo-600 px-1">{livros.length > 0 ? (currentPage - 1) * 10 + 1 : 0} — {Math.min(currentPage * 10, totalLivros)}</span> de <span className="text-slate-900">{totalLivros}</span> obras
+                            </div>
+                            <div className="relative group min-w-[140px]">
+                                <select
+                                    className="w-full pl-5 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 uppercase tracking-widest outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 cursor-pointer appearance-none transition-all shadow-sm group-hover:border-indigo-200"
+                                    value={10}
+                                    disabled
+                                >
+                                    <option value={10}>Exibir 10</option>
+                                </select>
+                                <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1 || loading}
-                                className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm active:scale-95"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(p => p - 1)}
+                                className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-indigo-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
                             >
-                                Anterior
+                                <ChevronLeft size={22} />
                             </button>
+
+                            <div className="flex items-center gap-2 mx-3">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum;
+                                    if (totalPages <= 5) pageNum = i + 1;
+                                    else if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={`w-12 h-12 rounded-[1.25rem] font-black text-sm transition-all shadow-sm ${currentPage === pageNum ? 'bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-100 scale-110' : 'bg-white hover:bg-indigo-50 text-slate-500 border border-slate-100 hover:border-indigo-200'}`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                disabled={currentPage === totalPages || loading}
-                                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-indigo-100 active:scale-95"
+                                disabled={currentPage === totalPages || totalPages === 0}
+                                onClick={() => setCurrentPage(p => p + 1)}
+                                className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-indigo-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
                             >
-                                Próxima
+                                <ChevronRight size={22} />
                             </button>
                         </div>
                     </div>
@@ -488,6 +556,13 @@ const Livros = () => {
                                                     Editar
                                                 </button>
                                                 <button
+                                                    onClick={() => setQrData({ data: ex.codigo_barras, title: viewingExemplaresFor.titulo })}
+                                                    className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                                                    title="Ver QR Code"
+                                                >
+                                                    <QrCode size={16} />
+                                                </button>
+                                                <button
                                                     onClick={() => handleDeleteExemplar(ex.id)}
                                                     className="p-3 bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
                                                 >
@@ -516,6 +591,19 @@ const Livros = () => {
                 onSave={handleSaveExemplar}
                 exemplar={selectedExemplar}
                 livroTitulo={viewingExemplaresFor?.titulo}
+            />
+
+            <QRScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScanSuccess={handleScanSuccess}
+            />
+
+            <QRDisplayModal
+                isOpen={!!qrData}
+                onClose={() => setQrData(null)}
+                data={qrData?.data}
+                title={qrData?.title}
             />
         </div >
     );

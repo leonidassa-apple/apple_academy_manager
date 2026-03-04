@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, User, Barcode, Calendar, FileText, CheckCircle, AlertCircle, Search, ChevronDown, ListFilter, ArrowLeft } from 'lucide-react';
+import { X, Save, User, QrCode, Calendar, FileText, CheckCircle, AlertCircle, Search, ChevronDown, ListFilter, ArrowLeft } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { Html5Qrcode } from 'html5-qrcode';
 import BookSelectionModal from './BookSelectionModal';
+import { useAuth } from '../context/AuthContext';
 
 export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
+    const { user } = useAuth();
     const [loading, setLoading] = useState(false);
 
     // Aluno Search State
@@ -12,9 +14,10 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
     const [filteredAlunos, setFilteredAlunos] = useState([]);
     const [alunoSearch, setAlunoSearch] = useState('');
     const [showAlunosDropdown, setShowAlunosDropdown] = useState(false);
+    const [professores, setProfessores] = useState([]);
 
     // Book Search State
-    const [searchMode, setSearchMode] = useState('barcode'); // 'barcode' | 'manual'
+    const [searchMode, setSearchMode] = useState('qrcode'); // 'qrcode' | 'manual'
     const [selectedBook, setSelectedBook] = useState(null);
     const [availableCopies, setAvailableCopies] = useState([]);
     const [isBookSelectionOpen, setIsBookSelectionOpen] = useState(false);
@@ -25,7 +28,8 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
         aluno_id: '',
         codigo_barras: '',
         data_retirada: new Date().toISOString().split('T')[0],
-        observacao: ''
+        observacao: '',
+        professor_id: ''
     });
 
     const sigCanvas = useRef({});
@@ -35,17 +39,19 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
     useEffect(() => {
         if (isOpen) {
             fetchAlunos();
+            fetchProfessores();
             setFormData(prev => ({
                 ...prev,
                 data_retirada: new Date().toISOString().split('T')[0],
-                codigo_barras: ''
+                codigo_barras: '',
+                professor_id: user?.role === 'professor' ? user.id : ''
             }));
             setScanning(false);
             setAlunoSearch('');
             setShowAlunosDropdown(false);
             setSelectedBook(null);
             setAvailableCopies([]);
-            setSearchMode('barcode');
+            setSearchMode('qrcode');
         }
     }, [isOpen]);
 
@@ -75,6 +81,18 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
             if (data.success) setAlunos(data.data);
         } catch (error) {
             console.error('Erro ao buscar alunos:', error);
+        }
+    };
+
+    const fetchProfessores = async () => {
+        try {
+            const res = await fetch('/api/admin/users');
+            const data = await res.json();
+            if (data.success) {
+                setProfessores(data.data.filter(u => u.role === 'professor' || u.role === 'admin'));
+            }
+        } catch (error) {
+            console.error('Erro ao buscar professores:', error);
         }
     };
 
@@ -127,7 +145,7 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
             }
         }
 
-        if (scanning && isOpen && searchMode === 'barcode') {
+        if (scanning && isOpen && searchMode === 'qrcode') {
             const startScanner = async () => {
                 try {
                     html5QrCode = new Html5Qrcode("reader-book");
@@ -156,11 +174,16 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.aluno_id) return alert("Selecione um aluno da lista.");
-        if (sigCanvas.current.isEmpty()) return alert("A assinatura do aluno é obrigatória.");
         if (!formData.codigo_barras) return alert("Indique o código de barras (Exemplar) do livro.");
 
+        let signatureData = null;
+        if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+            signatureData = sigCanvas.current.getCanvas().toDataURL('image/png');
+        } else {
+            return alert("A assinatura do aluno é obrigatória.");
+        }
+
         setLoading(true);
-        const signatureData = sigCanvas.current.getCanvas().toDataURL('image/png');
 
         try {
             const res = await fetch('/api/emprestimos-livros', {
@@ -263,11 +286,11 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
                                     <div className="flex bg-slate-100 p-1 rounded-lg">
                                         <button
                                             type="button"
-                                            onClick={() => { setSearchMode('barcode'); setScanning(false); }}
-                                            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${searchMode === 'barcode' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                            onClick={() => { setSearchMode('qrcode'); setScanning(false); }}
+                                            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${searchMode === 'qrcode' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
                                         >
-                                            <Barcode size={16} />
-                                            Mencionar Código
+                                            <QrCode size={16} />
+                                            Escanear QR Code
                                         </button>
                                         <button
                                             type="button"
@@ -280,15 +303,15 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
                                     </div>
                                 </div>
 
-                                {/* Barcode Mode */}
-                                {searchMode === 'barcode' && (
+                                {/* QR Mode */}
+                                {searchMode === 'qrcode' && (
                                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
                                                 value={formData.codigo_barras}
                                                 onChange={(e) => setFormData({ ...formData, codigo_barras: e.target.value })}
-                                                placeholder="Código de barras..."
+                                                placeholder="Código do Livro (QR)..."
                                                 className="block w-full px-4 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white shadow-sm font-mono"
                                             />
                                             <button
@@ -296,7 +319,7 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
                                                 onClick={() => setScanning(!scanning)}
                                                 className={`px-3 rounded-lg border transition-all ${scanning ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-gray-600 border-gray-200'}`}
                                             >
-                                                <Barcode className="w-5 h-5" />
+                                                <QrCode className="w-5 h-5" />
                                             </button>
                                         </div>
                                         {scanning && (
@@ -383,10 +406,29 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
                                     />
                                 </div>
 
+                                {/* Professor/Mentor selection (Only show for non-professor or as info) */}
+                                <div className="space-y-1">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex items-center">
+                                        <User className="w-3 h-3 mr-1" />
+                                        Professor Responsável
+                                    </label>
+                                    <select
+                                        value={formData.professor_id}
+                                        onChange={(e) => setFormData({ ...formData, professor_id: e.target.value })}
+                                        className="block w-full px-4 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:bg-white transition-all shadow-sm"
+                                        disabled={user?.role === 'professor'}
+                                    >
+                                        <option value="">Selecione o professor...</option>
+                                        {professores.map(pf => (
+                                            <option key={pf.id} value={pf.id}>{pf.username}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 {/* Signature Section */}
                                 <div className="space-y-1">
                                     <div className="flex justify-between items-end">
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Assinatura</label>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Assinatura do Aluno</label>
                                         <button
                                             type="button"
                                             onClick={clearSignature}
@@ -395,6 +437,7 @@ export default function BookLoanModal({ isOpen, onClose, onSuccess }) {
                                             Limpar
                                         </button>
                                     </div>
+
                                     <div className="border border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-white transition-colors overflow-hidden relative">
                                         <SignatureCanvas
                                             ref={sigCanvas}

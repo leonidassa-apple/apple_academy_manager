@@ -358,26 +358,26 @@ export default function Alunos() {
                     </table>
                 </div>
 
-                {/* Modern Pagination Area */}
-                <div className="mt-auto px-6 py-4 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-6 bg-slate-50/20">
-                    <div className="flex items-center gap-6">
-                        <div className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                            Mostrando <span className="text-slate-900">{totalStudents > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} — {Math.min(currentPage * itemsPerPage, totalStudents)}</span> de <span className="text-slate-900">{totalStudents}</span> registros
+                {/* Modern Pagination Area - Standardized Premium Style */}
+                <div className="mt-auto px-8 py-6 border-t border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                            Mostrando <span className="text-blue-600 px-1">{totalStudents > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} — {Math.min(currentPage * itemsPerPage, totalStudents)}</span> de <span className="text-slate-900">{totalStudents}</span> estudantes
                         </div>
-                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pág:</span>
+                        <div className="relative group min-w-[140px]">
                             <select
-                                className="text-xs font-black text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+                                className="w-full pl-5 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 cursor-pointer appearance-none transition-all shadow-sm group-hover:border-blue-200"
                                 value={itemsPerPage}
                                 onChange={(e) => {
                                     setItemsPerPage(parseInt(e.target.value));
                                     setCurrentPage(1);
                                 }}
                             >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
+                                <option value={10}>Exibir 10</option>
+                                <option value={20}>Exibir 20</option>
+                                <option value={50}>Exibir 50</option>
                             </select>
+                            <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
                         </div>
                     </div>
 
@@ -385,23 +385,24 @@ export default function Alunos() {
                         <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(p => p - 1)}
-                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 disabled:opacity-20 transition-all text-slate-600 shadow-sm disabled:cursor-not-allowed"
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-blue-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
                         >
-                            <ChevronLeft size={20} />
+                            <ChevronLeft size={22} />
                         </button>
 
-                        <div className="flex items-center gap-1.5">
-                            {[...Array(totalPages)].map((_, i) => {
-                                const pageNum = i + 1;
-                                if (totalPages > 5 && (pageNum !== 1 && pageNum !== totalPages && (pageNum < currentPage - 1 || pageNum > currentPage + 1))) {
-                                    if (pageNum === currentPage - 2 || pageNum === currentPage + 2) return <span key={pageNum} className="px-2 text-slate-300 font-bold">...</span>;
-                                    return null;
-                                }
+                        <div className="flex items-center gap-2 mx-3">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) pageNum = i + 1;
+                                else if (currentPage <= 3) pageNum = i + 1;
+                                else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                else pageNum = currentPage - 2 + i;
+
                                 return (
                                     <button
                                         key={pageNum}
                                         onClick={() => setCurrentPage(pageNum)}
-                                        className={`w-11 h-11 rounded-2xl font-black text-sm transition-all ${currentPage === pageNum ? 'bg-blue-600 text-white shadow-xl shadow-blue-200' : 'bg-white hover:bg-slate-50 text-slate-400 border border-slate-100'}`}
+                                        className={`w-12 h-12 rounded-[1.25rem] font-black text-sm transition-all shadow-sm ${currentPage === pageNum ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-100 scale-110' : 'bg-white hover:bg-blue-50 text-slate-500 border border-slate-100 hover:border-blue-200'}`}
                                     >
                                         {pageNum}
                                     </button>
@@ -412,9 +413,9 @@ export default function Alunos() {
                         <button
                             disabled={currentPage === totalPages}
                             onClick={() => setCurrentPage(p => p + 1)}
-                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 disabled:opacity-20 transition-all text-slate-600 shadow-sm disabled:cursor-not-allowed"
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-blue-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
                         >
-                            <ChevronRight size={20} />
+                            <ChevronRight size={22} />
                         </button>
                     </div>
                 </div>

@@ -133,31 +133,39 @@ export default function Devices() {
     );
 
     return (
-        <div className="space-y-8 animate-fade-in-up">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Devices</h1>
-                    <p className="text-gray-500 mt-1 flex items-center">
-                        <span className="flex h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
-                        {filteredDevices.length} itens no inventário
-                    </p>
+        <div className="animate-in-up">
+            {/* Premium Header */}
+            <div className="premium-card p-10 mb-10 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/50 rounded-full -mr-64 -mt-64 blur-3xl"></div>
+
+                <div className="relative z-10 flex items-center gap-8">
+                    <div className="p-5 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] shadow-2xl shadow-blue-200">
+                        <Monitor size={40} className="text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-2">Inventário de Devices</h1>
+                        <div className="flex items-center gap-3 text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">
+                            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                            {filteredDevices.length} Itens Catalogados
+                        </div>
+                    </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
+
+                <div className="relative z-10 flex flex-wrap gap-3">
                     {currentUser?.role === 'admin' && (
                         <>
                             <button
                                 onClick={handleImport}
-                                className="flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all font-semibold shadow-sm group"
+                                className="premium-btn-secondary"
                             >
-                                <Upload className="w-5 h-5 mr-2 text-gray-400 group-hover:text-blue-500 transition-colors" />
-                                Importar
+                                <Upload size={18} className="text-slate-400" />
+                                Importar Base
                             </button>
                             <button
                                 onClick={handleCreate}
-                                className="flex-1 md:flex-none flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-bold shadow-lg shadow-blue-200 active:scale-95"
+                                className="premium-btn-primary"
                             >
-                                <Plus className="w-5 h-5 mr-2" />
+                                <Plus size={20} />
                                 Novo Device
                             </button>
                         </>
@@ -166,14 +174,14 @@ export default function Devices() {
             </div>
 
             {/* List Section */}
-            <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-50 bg-gray-50/30">
-                    <div className="relative max-w-md">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <div className="premium-card overflow-hidden">
+                <div className="p-8 border-b border-slate-50 bg-slate-50/20">
+                    <div className="relative max-w-xl group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={20} />
                         <input
                             type="text"
                             placeholder="Buscar por nome, serial ou tipo..."
-                            className="bg-white border border-gray-200 text-gray-900 text-sm rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 block w-full pl-12 p-3.5 outline-none transition-all shadow-sm"
+                            className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-slate-700 font-bold placeholder:text-slate-400 shadow-sm"
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
@@ -184,105 +192,102 @@ export default function Devices() {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50/50">
-                            <tr>
-                                <th scope="col" className="px-6 py-4 text-left">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50/50 border-b border-slate-100 uppercase tracking-[0.1em] text-[10px] font-black text-slate-400">
+                                <th className="px-6 py-4 w-16 text-center">
                                     <input
                                         type="checkbox"
-                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        className="w-5 h-5 text-blue-600 border-slate-300 rounded-lg focus:ring-blue-500 transition-all cursor-pointer"
                                         checked={selectedDevices.length === paginatedDevices.length && paginatedDevices.length > 0}
                                         onChange={handleSelectAll}
                                     />
                                 </th>
-                                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Device</th>
-                                <th scope="col" className="hidden sm:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo & Modelo</th>
-                                <th scope="col" className="hidden lg:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Serial</th>
-                                <th scope="col" className="hidden md:table-cell px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/3">Local/Obs</th>
-                                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Status</th>
+                                <th className="px-4 py-4">Hardware</th>
+                                <th className="px-4 py-4 hidden sm:table-cell">Especificações</th>
+                                <th className="px-4 py-4 hidden lg:table-cell">ID / Serial</th>
+                                <th className="px-4 py-4 hidden md:table-cell">Localização/Obs</th>
+                                <th className="px-4 py-4 text-center">Status</th>
                                 {currentUser?.role === 'admin' && (
-                                    <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                                    <th className="px-6 py-4 text-right">Ações</th>
                                 )}
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-100">
+                        <tbody className="divide-y divide-slate-50">
                             {loading ? (
-                                <tr>
-                                    <td colSpan="7" className="px-6 py-12 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-                                            <p className="text-gray-500 font-medium">Carregando inventário...</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                Array(5).fill(0).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td colSpan="7" className="px-6 py-8"><div className="h-12 bg-slate-50 rounded-2xl w-full"></div></td>
+                                    </tr>
+                                ))
                             ) : paginatedDevices.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500 font-medium">
-                                        Nenhum device encontrado.
+                                    <td colSpan="7" className="px-6 py-32 text-center text-slate-400 font-bold uppercase tracking-widest">
+                                        Nenhum dispositivo registrado no sistema.
                                     </td>
                                 </tr>
                             ) : (
                                 paginatedDevices.map((d) => (
-                                    <tr key={d.id} className="group hover:bg-gray-50/80 transition-colors duration-150">
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                    <tr key={d.id} className="hover:bg-blue-50/20 transition-all group">
+                                        <td className="px-6 py-4 text-center">
                                             <input
                                                 type="checkbox"
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                className="w-5 h-5 text-blue-600 border-slate-300 rounded-lg focus:ring-blue-500 transition-all cursor-pointer"
                                                 checked={selectedDevices.includes(d.id)}
                                                 onChange={() => handleSelectDevice(d.id)}
                                             />
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mr-3 group-hover:bg-blue-100 transition-colors">
-                                                    <Monitor className="w-5 h-5" />
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 border-2 border-white shadow-md group-hover:scale-110 transition-transform">
+                                                    <Monitor size={24} />
                                                 </div>
-                                                <div className="max-w-[200px] truncate">
-                                                    <div className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{d.nome}</div>
-                                                    <div className="text-xs text-gray-500 truncate">{d.modelo || 'Modelo não inf.'}</div>
+                                                <div className="max-w-[200px]">
+                                                    <div className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">{d.nome}</div>
+                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{d.modelo || 'S/ MODELO'}</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            <span className="font-medium text-gray-900">{d.tipo}</span>
-                                            <div className="text-xs text-gray-400">{d.ano || 'Ano não inf.'}</div>
+                                        <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap">
+                                            <div className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{d.tipo}</div>
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 tracking-wider font-mono">{d.ano || 'ANO N/D'}</div>
                                         </td>
-                                        <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap font-mono text-xs text-gray-400 uppercase">
-                                            {d.numero_serie}
+                                        <td className="hidden lg:table-cell px-4 py-4 whitespace-nowrap">
+                                            <div className="text-[10px] font-bold text-slate-400 font-mono tracking-widest uppercase">{d.numero_serie}</div>
                                         </td>
-                                        <td className="hidden md:table-cell px-6 py-4 text-sm text-gray-500 min-w-[200px] max-w-xs">
-                                            <div className="line-clamp-2 leading-relaxed">
-                                                {d.local || d.observacao || '-'}
+                                        <td className="hidden md:table-cell px-4 py-4">
+                                            <div className="text-xs font-bold text-slate-600 line-clamp-1 italic tracking-tight uppercase leading-relaxed">
+                                                {d.local || d.observacao || '—'}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${d.status === 'Disponível'
+                                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                                            <span className={`status-badge ${d.status === 'Disponível'
                                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                                                 : d.status === 'Emprestado'
                                                     ? 'bg-amber-50 text-amber-700 border-amber-100'
                                                     : 'bg-rose-50 text-rose-700 border-rose-100'
                                                 }`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full mr-2 ${d.status === 'Disponível' ? 'bg-emerald-500' : d.status === 'Emprestado' ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${d.status === 'Disponível' ? 'bg-emerald-500' : d.status === 'Emprestado' ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
                                                 {d.status}
                                             </span>
                                         </td>
                                         {currentUser?.role === 'admin' && (
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div className="flex items-center justify-end space-x-2">
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
                                                     <button
                                                         onClick={() => handleEdit(d)}
-                                                        className={`p-2 rounded-lg transition-all ${d.id < 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                                        className={`p-2.5 bg-white border border-slate-100 rounded-xl transition-all shadow-sm ${d.id < 0 ? 'opacity-30 cursor-not-allowed' : 'hover:border-blue-500 hover:text-blue-600'}`}
                                                         title={d.id < 0 ? "Item de sistema - Não editável" : "Editar Device"}
                                                     >
-                                                        <Edit className="w-4 h-4" />
+                                                        <Edit size={16} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(d.id, d.nome)}
-                                                        className={`p-2 rounded-lg transition-all ${d.id < 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-rose-600 hover:bg-rose-50'}`}
+                                                        className={`p-2.5 bg-white border border-slate-100 rounded-xl transition-all shadow-sm ${d.id < 0 ? 'opacity-30 cursor-not-allowed' : 'hover:border-rose-500 hover:text-rose-600'}`}
                                                         disabled={d.id < 0}
                                                         title={d.id < 0 ? "Item de sistema - Não excluível" : "Excluir Device"}
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Trash2 size={16} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -294,55 +299,64 @@ export default function Devices() {
                     </table>
                 </div>
 
-                {/* Pagination */}
-                <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <span className="text-sm text-gray-500">
-                            Mostrando <span className="font-semibold text-gray-800">{(currentPage - 1) * itemsPerPage + 1}</span>-
-                            <span className="font-semibold text-gray-800">{Math.min(currentPage * itemsPerPage, filteredDevices.length)}</span> de
-                            <span className="font-semibold text-gray-800"> {filteredDevices.length}</span>
-                        </span>
-                        <select
-                            className="text-sm border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                            value={itemsPerPage}
-                            onChange={(e) => {
-                                setItemsPerPage(parseInt(e.target.value));
-                                setCurrentPage(1);
-                            }}
-                        >
-                            <option value={10}>10 / pág</option>
-                            <option value={20}>20 / pág</option>
-                            <option value={50}>50 / pág</option>
-                        </select>
+                {/* Modern Pagination Area - Standardized Premium Style */}
+                <div className="mt-auto px-8 py-6 border-t border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                            Mostrando <span className="text-blue-600 px-1">{filteredDevices.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} — {Math.min(currentPage * itemsPerPage, filteredDevices.length)}</span> de <span className="text-slate-900">{filteredDevices.length}</span> registros
+                        </div>
+                        <div className="relative group min-w-[140px]">
+                            <select
+                                className="w-full pl-5 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 cursor-pointer appearance-none transition-all shadow-sm group-hover:border-blue-200"
+                                value={itemsPerPage}
+                                onChange={(e) => {
+                                    setItemsPerPage(parseInt(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <option value={10}>Exibir 10</option>
+                                <option value={20}>Exibir 20</option>
+                                <option value={50}>Exibir 50</option>
+                            </select>
+                            <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <button
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(p => p - 1)}
-                            className="p-2 border border-gray-200 rounded-lg hover:bg-white disabled:opacity-30 transition-all text-gray-600 shadow-sm"
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-blue-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
                         >
-                            <ChevronLeft size={20} />
+                            <ChevronLeft size={22} />
                         </button>
 
-                        <div className="flex items-center gap-1">
-                            {[...Array(totalPages)].map((_, i) => (
-                                <button
-                                    key={i + 1}
-                                    onClick={() => setCurrentPage(i + 1)}
-                                    className={`min-w-[36px] h-9 rounded-lg font-bold transition-all ${currentPage === i + 1 ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'hover:bg-white text-gray-600 border border-transparent hover:border-gray-200'}`}
-                                >
-                                    {i + 1}
-                                </button>
-                            ))}
+                        <div className="flex items-center gap-2 mx-3">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) pageNum = i + 1;
+                                else if (currentPage <= 3) pageNum = i + 1;
+                                else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                else pageNum = currentPage - 2 + i;
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`w-12 h-12 rounded-[1.25rem] font-black text-sm transition-all shadow-sm ${currentPage === pageNum ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-100 scale-110' : 'bg-white hover:bg-blue-50 text-slate-500 border border-slate-100 hover:border-blue-200'}`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
                         </div>
 
                         <button
                             disabled={currentPage === totalPages || totalPages === 0}
                             onClick={() => setCurrentPage(p => p + 1)}
-                            className="p-2 border border-gray-200 rounded-lg hover:bg-white disabled:opacity-30 transition-all text-gray-600 shadow-sm"
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-blue-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
                         >
-                            <ChevronRight size={20} />
+                            <ChevronRight size={22} />
                         </button>
                     </div>
                 </div>
@@ -350,24 +364,31 @@ export default function Devices() {
 
             {/* Bulk Actions Bar */}
             {currentUser?.role === 'admin' && selectedDevices.length > 0 && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-bounce-in">
-                    <span className="text-sm font-semibold">
-                        {selectedDevices.length} item(s) selecionado(s)
-                    </span>
-                    <div className="h-6 w-px bg-slate-700"></div>
-                    <button
-                        onClick={handleBulkDelete}
-                        className="flex items-center text-rose-400 hover:text-rose-300 font-bold text-sm transition-colors"
-                    >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Excluir Selecionados
-                    </button>
-                    <button
-                        onClick={() => setSelectedDevices([])}
-                        className="text-slate-400 hover:text-white text-sm transition-colors"
-                    >
-                        Cancelar
-                    </button>
+                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur-xl text-white px-8 py-5 rounded-[2.5rem] shadow-2xl flex items-center gap-8 z-50 animate-in slide-in-from-bottom-10 duration-500">
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-lg shadow-lg">
+                            {selectedDevices.length}
+                        </div>
+                        <p className="text-sm font-black uppercase tracking-widest text-slate-300">
+                            Selecionados
+                        </p>
+                    </div>
+                    <div className="h-10 w-px bg-slate-700/50"></div>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleBulkDelete}
+                            className="flex items-center gap-2 px-6 py-3 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                        >
+                            <Trash2 size={16} />
+                            Excluir Tudo
+                        </button>
+                        <button
+                            onClick={() => setSelectedDevices([])}
+                            className="px-6 py-3 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
                 </div>
             )}
 

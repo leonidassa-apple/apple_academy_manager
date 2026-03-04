@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Smartphone, TrendingUp, Activity, ArrowUp, ArrowDown, Package, AlertCircle, Book, Calendar, CheckCircle } from 'lucide-react';
+import { Users, Smartphone, TrendingUp, Activity, ArrowUp, ArrowDown, Package, AlertCircle, Book, Calendar, CheckCircle, LayoutDashboard, Clock, MapPin } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 
 export default function Dashboard() {
@@ -48,34 +48,34 @@ export default function Dashboard() {
 
     const MetricCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, color = "blue" }) => {
         const colorClasses = {
-            blue: "bg-blue-50 text-blue-600 border-blue-100",
-            green: "bg-green-50 text-green-600 border-green-100",
-            purple: "bg-purple-50 text-purple-600 border-purple-100",
-            orange: "bg-orange-50 text-orange-600 border-orange-100"
+            blue: "bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-600 group-hover:text-white",
+            green: "bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white",
+            purple: "bg-purple-50 text-purple-600 border-purple-100 group-hover:bg-purple-600 group-hover:text-white",
+            orange: "bg-amber-50 text-amber-600 border-amber-100 group-hover:bg-amber-600 group-hover:text-white",
+            red: "bg-rose-50 text-rose-600 border-rose-100 group-hover:bg-rose-600 group-hover:text-white"
         };
 
         return (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-                        <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
-                        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+            <div className="premium-card p-8 group overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-16 -mt-16 group-hover:bg-white/10 transition-colors duration-500"></div>
+
+                <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className={`p-4 rounded-2xl transition-all duration-300 border ${colorClasses[color]}`}>
+                            <Icon size={28} />
+                        </div>
                         {trend && trendValue !== undefined && (
-                            <div className="flex items-center gap-1 mt-2">
-                                {trend === 'up' ? (
-                                    <ArrowUp className="w-4 h-4 text-green-500" />
-                                ) : (
-                                    <ArrowDown className="w-4 h-4 text-red-500" />
-                                )}
-                                <span className={`text-sm font-medium ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                                    {trendValue} este ano
-                                </span>
+                            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                {trend === 'up' ? <ArrowUp size={12} strokeWidth={3} /> : <ArrowDown size={12} strokeWidth={3} />}
+                                {trendValue}
                             </div>
                         )}
                     </div>
-                    <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-                        <Icon className="w-6 h-6" />
+
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{title}</h3>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-black text-slate-900 tracking-tight">{value}</span>
+                        {subtitle && <span className="text-xs font-bold text-slate-400 truncate">{subtitle}</span>}
                     </div>
                 </div>
             </div>
@@ -85,21 +85,27 @@ export default function Dashboard() {
     const ProgressBar = ({ label, current, total, color = "blue" }) => {
         const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
         const colorClasses = {
-            blue: "bg-blue-500",
-            green: "bg-green-500",
-            red: "bg-red-500",
-            orange: "bg-orange-500"
+            blue: "bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.3)]",
+            green: "bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]",
+            red: "bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]",
+            orange: "bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
         };
 
         return (
-            <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">{label}</span>
-                    <span className="text-sm font-semibold text-gray-900">{current}/{total}</span>
+            <div className="mb-6 last:mb-0">
+                <div className="flex justify-between items-end mb-3">
+                    <div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Indicador</span>
+                        <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{label}</span>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-lg font-black text-slate-900 leading-none">{percentage}%</span>
+                        <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-tighter">{current} / {total}</span>
+                    </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
                     <div
-                        className={`h-2 rounded-full transition-all ${colorClasses[color]}`}
+                        className={`h-full rounded-full transition-all duration-1000 ease-out ${colorClasses[color]}`}
                         style={{ width: `${percentage}%` }}
                     ></div>
                 </div>
@@ -113,181 +119,238 @@ export default function Dashboard() {
     const regularAlunos = totalAlunos - foundationAlunos;
 
     return (
-        <div className="bg-gray-50">
-            {/* Header */}
-            <div className="mb-6 md:mb-8">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-                <p className="text-sm md:text-base text-gray-500">Visão geral do sistema de gerenciamento da Academy</p>
-            </div>
+        <div className="animate-in-up">
+            {/* Premium Header */}
+            <div className="premium-card p-10 mb-10 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/50 rounded-full -mr-64 -mt-64 blur-3xl"></div>
 
+                <div className="relative z-10 flex items-center gap-8">
+                    <div className="p-5 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] shadow-2xl shadow-blue-200">
+                        <TrendingUp size={40} className="text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-2">Monitor Acadêmico</h1>
+                        <div className="flex items-center gap-3 text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">
+                            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                            Gestão de Fluxo • Academy Manager v2.0
+                        </div>
+                    </div>
+                </div>
+
+                <div className="relative z-10 hidden sm:flex items-center gap-4">
+                    <div className="text-right">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Data do Sistema</p>
+                        <p className="text-sm font-black text-slate-900">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                    </div>
+                </div>
+            </div>
             {/* Main Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
                 <MetricCard
-                    title="Total de Alunos"
+                    title="Matrículas Totais"
                     value={totalAlunos}
-                    subtitle={`${regularAlunos} Regular • ${foundationAlunos} Foundation`}
+                    subtitle={`${foundationAlunos} Foundation`}
                     icon={Users}
                     trend="up"
                     trendValue={stats.alunos?.foundation_ano || 0}
                     color="blue"
                 />
                 <MetricCard
-                    title="Devices Disponíveis"
+                    title="Tecnologia (Disponível)"
                     value={stats.devices?.disponiveis || 0}
-                    subtitle={`${totalDevices} devices no total`}
+                    subtitle={`${totalDevices} No Inventário`}
                     icon={Smartphone}
                     color="green"
                 />
                 <MetricCard
-                    title="Emprestados"
-                    value={stats.devices?.emprestados || 0}
-                    subtitle={`${totalDevices > 0 ? Math.round((stats.devices?.emprestados / totalDevices) * 100) : 0}% em uso`}
+                    title="Acervo (Disponível)"
+                    value={stats.biblioteca?.disponiveis || 0}
+                    subtitle={`${stats.biblioteca?.total_livros || 0} Obras`}
+                    icon={Book}
+                    color="purple"
+                />
+                <MetricCard
+                    title="Em Uso (Circular)"
+                    value={(stats.devices?.emprestados || 0) + (stats.biblioteca?.emprestados || 0)}
+                    subtitle={`${(stats.devices?.emprestados || 0)} Equip. | ${(stats.biblioteca?.emprestados || 0)} Livros`}
                     icon={Package}
                     color="orange"
                 />
                 <MetricCard
-                    title="Concluídos"
-                    value={stats.concluidos || 0}
-                    subtitle="Total histórico"
-                    icon={CheckCircle}
-                    color="green"
-                />
-                <MetricCard
-                    title="Alertas de Prazo"
+                    title="Alertas Ativos"
                     value={stats.alertas?.atrasados || 0}
-                    subtitle={`${stats.alertas?.vencendo_hoje || 0} vencendo hoje`}
+                    subtitle={`${stats.alertas?.vencendo_hoje || 0} Hoje`}
                     icon={AlertCircle}
-                    color={stats.alertas?.atrasados > 0 ? "red" : "orange"}
+                    color={stats.alertas?.atrasados > 0 ? "red" : "blue"}
                 />
             </div>
 
-            {/* Loan Alerts Section (New) */}
-            {(stats.alertas?.atrasados > 0 || stats.alertas?.vencendo_hoje > 0 || stats.alertas?.vencendo_breve > 0) && (
-                <div className="bg-white rounded-xl shadow-sm border border-red-100 p-6 mb-8 animate-in slide-in-from-top-4 duration-500">
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-red-50 text-red-600 rounded-lg">
-                                <AlertCircle className="w-6 h-6" />
+            {/* Middle Section: Alerts & Analytics */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+                {/* Analytics Columns */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Loan Alerts Section */}
+                    {(stats.alertas?.atrasados > 0 || stats.alertas?.vencendo_hoje > 0 || stats.alertas?.vencendo_breve > 0) && (
+                        <div className="premium-card p-10 border-rose-100 mb-8">
+                            <div className="flex items-center justify-between mb-10">
+                                <div className="flex items-center gap-5">
+                                    <div className="p-4 bg-rose-50 text-rose-600 rounded-3xl shadow-lg shadow-rose-100">
+                                        <AlertCircle size={32} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1">Controle de Prazos</h2>
+                                        <p className="status-badge bg-rose-50 text-rose-700 border-rose-100">Monitoramento Crítico</p>
+                                    </div>
+                                </div>
+                                <div className="hidden sm:flex items-center gap-3">
+                                    {stats.alertas?.atrasados > 0 && <span className="bg-rose-500 text-white text-[9px] font-black uppercase px-4 py-2 rounded-full shadow-lg shadow-rose-200">{stats.alertas.atrasados} Atrasos</span>}
+                                    {stats.alertas?.vencendo_hoje > 0 && <span className="bg-amber-500 text-white text-[9px] font-black uppercase px-4 py-2 rounded-full shadow-lg shadow-amber-200">{stats.alertas.vencendo_hoje} Hoje</span>}
+                                </div>
                             </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                {stats.alertas?.lista?.map((alerta, idx) => (
+                                    <div key={idx} className="p-6 bg-slate-50 border border-slate-100 rounded-3xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all border-l-4 border-l-rose-500 group">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">{alerta.tipo_item}</div>
+                                            <span className="text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-1 rounded-lg uppercase">{alerta.data_vencimento}</span>
+                                        </div>
+                                        <h3 className="font-black text-slate-900 text-lg leading-tight mb-4 group-hover:text-blue-600 transition-colors uppercase tracking-tighter truncate">{alerta.item_nome}</h3>
+                                        <div className="flex items-center gap-3 pt-4 border-t border-slate-200/60">
+                                            <div className="w-8 h-8 rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-[10px] font-black text-slate-600">
+                                                {alerta.aluno_nome?.charAt(0)}
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">{alerta.aluno_nome}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Upcoming Events Section */}
+                    {stats.proximos_eventos && stats.proximos_eventos.length > 0 && (
+                        <div className="premium-card p-10 border-indigo-100">
+                            <div className="flex items-center justify-between mb-10">
+                                <div className="flex items-center gap-5">
+                                    <div className="p-4 bg-indigo-50 text-indigo-600 rounded-3xl shadow-lg shadow-indigo-100">
+                                        <Calendar size={32} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-1">Próximos Eventos</h2>
+                                        <p className="status-badge bg-indigo-50 text-indigo-700 border-indigo-100">Agenda Acadêmica</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                {stats.proximos_eventos.map((evento, idx) => (
+                                    <div key={idx} className="p-6 bg-slate-50 border border-slate-100 rounded-3xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all flex items-center justify-between group">
+                                        <div className="flex items-center gap-6">
+                                            <div className="flex flex-col items-center justify-center p-3 bg-white rounded-2xl border border-slate-100 shadow-sm min-w-[70px]">
+                                                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{new Date(evento.data_inicio).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span>
+                                                <span className="text-2xl font-black text-slate-900 leading-none">{new Date(evento.data_inicio).getDate()}</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-slate-900 text-lg leading-tight group-hover:text-indigo-600 transition-colors uppercase tracking-tighter">{evento.titulo}</h3>
+                                                <div className="flex items-center gap-3 mt-1">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                                                        <Clock size={12} />
+                                                        {new Date(evento.data_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                    {evento.local && (
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                                                            <MapPin size={12} />
+                                                            {evento.local}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className={`w-3 h-3 rounded-full shadow-sm`} style={{ backgroundColor: evento.cor }}></div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(!stats.alertas?.atrasados && !stats.alertas?.vencendo_hoje && !stats.alertas?.vencendo_breve && (!stats.proximos_eventos || stats.proximos_eventos.length === 0)) && (
+                        <div className="premium-card p-10 flex flex-col items-center justify-center text-center h-full">
+                            <div className="p-6 bg-emerald-50 text-emerald-600 rounded-full mb-6">
+                                <CheckCircle size={48} />
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-900 mb-2">Monitoramento Ativo</h2>
+                            <p className="text-slate-500 font-medium">Não há alertas ou eventos imediatos para reportar.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Vertical Analytics Column */}
+                <div className="space-y-8">
+                    <div className="premium-card p-10 h-full">
+                        <div className="flex items-center gap-4 mb-10">
+                            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                                <Activity size={24} />
+                            </div>
+                            <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Métricas Educacionais</h2>
+                        </div>
+
+                        <div className="space-y-10">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900">Monitoramento de Devoluções</h2>
-                                <p className="text-sm text-gray-500">Itens com prazo expirado ou vencendo em breve</p>
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">Distribuição de Alunos</h3>
+                                <ProgressBar label="Apple Foundation" current={foundationAlunos} total={totalAlunos} color="blue" />
+                                <ProgressBar label="Cursos Regulares" current={regularAlunos} total={totalAlunos} color="green" />
+                            </div>
+
+                            <div>
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">Distribuição Acadêmica</h3>
+                                <ProgressBar label="Estudantes Regular" current={stats.alunos?.regular || 0} total={totalAlunos} color="blue" />
+                                <ProgressBar label="Estudantes Foundation" current={foundationAlunos} total={totalAlunos} color="indigo" />
+                            </div>
+
+                            <div>
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">Ocupação de Devices</h3>
+                                <ProgressBar label="Devices Alocados" current={stats.devices?.emprestados || 0} total={totalDevices} color="orange" />
+                                <ProgressBar label="Disponibilidade" current={stats.devices?.disponiveis || 0} total={totalDevices} color="green" />
+                            </div>
+
+                            <div>
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">Ocupação Literária</h3>
+                                <ProgressBar label="Livros em Circulação" current={stats.biblioteca?.emprestados || 0} total={stats.biblioteca?.total_exemplares || 0} color="purple" />
+                                <ProgressBar label="Exemplares Disponíveis" current={stats.biblioteca?.disponiveis || 0} total={stats.biblioteca?.total_exemplares || 0} color="blue" />
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            {stats.alertas?.atrasados > 0 && (
-                                <span className="px-3 py-1 bg-red-500 text-white text-[10px] font-black uppercase rounded-full">
-                                    {stats.alertas.atrasados} Atrasados
-                                </span>
-                            )}
-                            {stats.alertas?.vencendo_hoje > 0 && (
-                                <span className="px-3 py-1 bg-orange-500 text-white text-[10px] font-black uppercase rounded-full">
-                                    {stats.alertas.vencendo_hoje} Hoje
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {stats.alertas?.lista?.map((alerta, idx) => (
-                            <div key={idx} className={`p-4 rounded-xl border transition-all hover:shadow-md ${alerta.status === 'Atrasado' ? 'bg-red-50/30 border-red-100' : 'bg-gray-50/50 border-gray-100'}`}>
-                                <div className="flex items-start justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        {alerta.tipo_item === 'Livro' ? <Book className="w-4 h-4 text-purple-600" /> : <Smartphone className="w-4 h-4 text-blue-600" />}
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{alerta.tipo_item}</span>
-                                    </div>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded shadow-sm ${alerta.status === 'Atrasado' ? 'bg-red-500 text-white' : 'bg-orange-100 text-orange-700'}`}>
-                                        {alerta.data_vencimento}
-                                    </span>
-                                </div>
-                                <h3 className="font-bold text-gray-900 text-sm line-clamp-1">{alerta.item_nome}</h3>
-                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100/50">
-                                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold">
-                                        {alerta.aluno_nome?.charAt(0)}
-                                    </div>
-                                    <span className="text-xs text-gray-600 font-medium truncate">{alerta.aluno_nome}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Detailed Analytics Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Students Breakdown */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Users className="w-5 h-5 text-blue-600" />
-                        <h2 className="text-lg font-semibold text-gray-900">Alunos por Categoria</h2>
-                    </div>
-                    <ProgressBar
-                        label="Foundation Program"
-                        current={foundationAlunos}
-                        total={totalAlunos}
-                        color="blue"
-                    />
-                    <ProgressBar
-                        label="Regular Program"
-                        current={regularAlunos}
-                        total={totalAlunos}
-                        color="green"
-                    />
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                        <p className="text-sm text-gray-500">
-                            <span className="font-semibold text-gray-700">{stats.alunos?.foundation_ano || 0}</span> novos alunos Foundation este ano
-                        </p>
-                    </div>
-                </div>
-
-                {/* Device Status */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Smartphone className="w-5 h-5 text-green-600" />
-                        <h2 className="text-lg font-semibold text-gray-900">Status dos Devices</h2>
-                    </div>
-                    <ProgressBar
-                        label="Disponíveis para Empréstimo"
-                        current={stats.devices?.disponiveis || 0}
-                        total={totalDevices}
-                        color="green"
-                    />
-                    <ProgressBar
-                        label="Emprestados Atualmente"
-                        current={stats.devices?.emprestados || 0}
-                        total={totalDevices}
-                        color="orange"
-                    />
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                        <p className="text-sm text-gray-500">
-                            Taxa de utilização: <span className="font-semibold text-gray-700">
-                                {totalDevices > 0 ? Math.round((stats.devices?.emprestados / totalDevices) * 100) : 0}%
-                            </span>
-                        </p>
                     </div>
                 </div>
             </div>
 
-            {/* Recent Activity Section */}
+            {/* Bottom Row: Recent Activity */}
             {stats.recent_activity && stats.recent_activity.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Activity className="w-5 h-5 text-purple-600" />
-                        <h2 className="text-lg font-semibold text-gray-900">Atividades Recentes</h2>
+                <div className="premium-card p-10">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl shadow-lg shadow-purple-50">
+                            <LayoutDashboard size={24} />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Fluxo Recente</h2>
                     </div>
-                    <div className="space-y-3">
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                         {stats.recent_activity.slice(0, 5).map((activity, idx) => (
-                            <div key={idx} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-700">{activity.aluno_nome}</p>
-                                    <p className="text-xs text-gray-500">{activity.item_nome} • {activity.data_retirada}</p>
+                            <div key={idx} className="p-6 bg-slate-50 border border-slate-100 rounded-3xl hover:shadow-xl hover:shadow-slate-200/50 hover:bg-white transition-all transform hover:-translate-y-1 group">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${activity.categoria === 'Device' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                        {activity.categoria}
+                                    </div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{activity.data_retirada}</span>
                                 </div>
+                                <p className="font-black text-slate-900 text-sm mb-1 uppercase tracking-tighter line-clamp-1 group-hover:text-blue-600 transition-colors">{activity.aluno_nome}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate">{activity.item_nome}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
         </div>
+
     );
 }

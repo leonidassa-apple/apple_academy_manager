@@ -10,8 +10,12 @@ const LivroModal = ({ isOpen, onClose, onSave, livro }) => {
         ano: '',
         editora: '',
         edicao: '',
-        descricao: ''
+        descricao: '',
+        tags: ''
     });
+
+    const [foto, setFoto] = useState(null);
+    const [fotoPreview, setFotoPreview] = useState(null);
 
     useEffect(() => {
         if (livro) {
@@ -23,8 +27,10 @@ const LivroModal = ({ isOpen, onClose, onSave, livro }) => {
                 ano: livro.ano || '',
                 editora: livro.editora || '',
                 edicao: livro.edicao || '',
-                descricao: livro.descricao || ''
+                descricao: livro.descricao || '',
+                tags: livro.tags || ''
             });
+            setFotoPreview(livro.foto_path ? `/${livro.foto_path}` : null);
         } else {
             setFormData({
                 titulo: '',
@@ -34,8 +40,11 @@ const LivroModal = ({ isOpen, onClose, onSave, livro }) => {
                 ano: '',
                 editora: '',
                 edicao: '',
-                descricao: ''
+                descricao: '',
+                tags: ''
             });
+            setFotoPreview(null);
+            setFoto(null);
         }
     }, [livro, isOpen]);
 
@@ -44,9 +53,17 @@ const LivroModal = ({ isOpen, onClose, onSave, livro }) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleFotoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setFoto(file);
+            setFotoPreview(URL.createObjectURL(file));
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSave(formData);
+        onSave({ ...formData, foto });
     };
 
     if (!isOpen) return null;
@@ -178,6 +195,21 @@ const LivroModal = ({ isOpen, onClose, onSave, livro }) => {
 
                             <div className="md:col-span-2 space-y-1.5">
                                 <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
+                                    <Tag className="w-4 h-4 mr-1.5 text-gray-400" />
+                                    Tags do Livro (Separadas por vírgula)
+                                </label>
+                                <input
+                                    type="text"
+                                    name="tags"
+                                    value={formData.tags}
+                                    onChange={handleChange}
+                                    className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+                                    placeholder="Ex: Sandbox, Tecnologia, Apple"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 space-y-1.5">
+                                <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
                                     <AlignLeft className="w-4 h-4 mr-1.5 text-gray-400" />
                                     Descrição
                                 </label>
@@ -185,10 +217,32 @@ const LivroModal = ({ isOpen, onClose, onSave, livro }) => {
                                     name="descricao"
                                     value={formData.descricao}
                                     onChange={handleChange}
-                                    rows="3"
+                                    rows="2"
                                     className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm resize-none"
                                     placeholder="Sinopse ou observações sobre o livro..."
                                 ></textarea>
+                            </div>
+
+                            <div className="md:col-span-2 space-y-1.5">
+                                <label className="block text-sm font-semibold text-gray-700 ml-1">Imagem da Capa</label>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-24 h-32 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
+                                        {fotoPreview ? (
+                                            <img src={fotoPreview} alt="Preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <Book className="text-slate-200" size={32} />
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFotoChange}
+                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-2 uppercase font-black tracking-widest">Resolução recomendada: 600x900px</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

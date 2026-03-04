@@ -11,15 +11,23 @@ import Agenda from './pages/Agenda';
 import Equipments from './pages/Equipments';
 import Admin from './pages/Admin';
 import Livros from './pages/Livros';
+import Perfil from './pages/Perfil';
+import Inventory from './pages/Inventory';
 import LivrosPublic from './pages/LivrosPublic';
 import EmprestimosLivros from './pages/EmprestimosLivros';
-import Inventory from './pages/Inventory';
 
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
   if (loading) return <div className="flex h-screen items-center justify-center bg-gray-100 text-gray-500">Carregando aplicação...</div>;
   if (!user) return <Navigate to="/login" replace />;
   return <Layout />;
+};
+
+const StaffRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="flex h-screen items-center justify-center bg-gray-100 text-gray-500">Carregando aplicação...</div>;
+  if (user?.role !== 'admin' && user?.role !== 'professor') return <Navigate to="/dashboard" replace />;
+  return <Outlet />;
 };
 
 const AdminRoute = () => {
@@ -43,11 +51,17 @@ function App() {
             <Route path="/emprestimos" element={<Emprestimos />} />
             <Route path="/eventos" element={<Eventos />} />
             <Route path="/agenda" element={<Agenda />} />
+            <Route path="/perfil" element={<Perfil />} />
+
             {/* Admin Only Routes */}
             <Route element={<AdminRoute />}>
               <Route path="/dispositivos" element={<Equipments />} />
               <Route path="/inventario" element={<Inventory />} />
               <Route path="/admin" element={<Admin />} />
+            </Route>
+
+            {/* Staff (Admin + Professor) Routes */}
+            <Route element={<StaffRoute />}>
               <Route path="/livros" element={<Livros />} />
             </Route>
 

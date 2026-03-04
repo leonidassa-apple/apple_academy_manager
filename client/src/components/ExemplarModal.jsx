@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Barcode, MapPin, AlertCircle, Info } from 'lucide-react';
+import { X, Save, QrCode, MapPin, AlertCircle, Info } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const ExemplarModal = ({ isOpen, onClose, onSave, exemplar, livroTitulo }) => {
+    const [scanning, setScanning] = useState(false);
     const [formData, setFormData] = useState({
         codigo_barras: '',
         localizacao: '',
@@ -10,6 +12,41 @@ const ExemplarModal = ({ isOpen, onClose, onSave, exemplar, livroTitulo }) => {
     });
 
     useEffect(() => {
+        let html5QrCode = null;
+        async function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                try { await html5QrCode.stop(); } catch (e) { console.error(e); }
+            }
+        }
+
+        if (scanning && isOpen) {
+            const startScanner = async () => {
+                try {
+                    html5QrCode = new Html5Qrcode("reader-exemplar");
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 15, qrbox: { width: 300, height: 180 }, aspectRatio: 1.0 },
+                        (decodedText) => {
+                            setFormData(prev => ({ ...prev, codigo_barras: decodedText }));
+                            if (navigator.vibrate) navigator.vibrate(200);
+                            stopScanner().then(() => setScanning(false));
+                        }
+                    );
+                } catch (err) {
+                    console.error("Erro ao iniciar câmera:", err);
+                    setScanning(false);
+                    alert("Erro no scanner. Tente digitar o código.");
+                }
+            };
+            const timer = setTimeout(startScanner, 300);
+            return () => { clearTimeout(timer); stopScanner(); };
+        } else {
+            stopScanner();
+        }
+    }, [scanning, isOpen]);
+
+    useEffect(() => {
+        setScanning(false);
         if (exemplar) {
             setFormData({
                 codigo_barras: exemplar.codigo_barras || '',
@@ -51,7 +88,7 @@ const ExemplarModal = ({ isOpen, onClose, onSave, exemplar, livroTitulo }) => {
                     <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-5 flex justify-between items-center">
                         <div className="flex items-center space-x-3 text-white">
                             <div className="p-2 bg-white/20 rounded-lg backdrop-blur-md">
-                                <Barcode className="w-5 h-5" />
+                                <QrCode className="w-5 h-5" />
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold leading-6">
@@ -68,19 +105,34 @@ const ExemplarModal = ({ isOpen, onClose, onSave, exemplar, livroTitulo }) => {
                     <form onSubmit={handleSubmit} className="px-6 py-6 space-y-5">
                         <div className="space-y-1.5">
                             <label className="block text-sm font-semibold text-gray-700 ml-1 flex items-center">
-                                <Barcode className="w-4 h-4 mr-1.5 text-gray-400" />
-                                Código de Barras *
+                                <QrCode className="w-4 h-4 mr-1.5 text-gray-400" />
+                                QR Code / ID do Livro *
                             </label>
-                            <input
-                                type="text"
-                                name="codigo_barras"
-                                value={formData.codigo_barras}
-                                onChange={handleChange}
-                                required
-                                className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm font-mono placeholder-gray-400"
-                                placeholder="Escaneie ou digite o código"
-                                autoFocus
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    name="codigo_barras"
+                                    value={formData.codigo_barras}
+                                    onChange={handleChange}
+                                    required
+                                    className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm font-mono placeholder-gray-400"
+                                    placeholder="Escaneie ou digite o código QR"
+                                    autoFocus
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setScanning(!scanning)}
+                                    className={`px-4 rounded-xl border transition-all flex items-center justify-center ${scanning ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                                    title="Escanear QR Code com Câmera"
+                                >
+                                    <QrCode className="w-5 h-5" />
+                                </button>
+                            </div>
+                            {scanning && (
+                                <div className="mt-2 rounded-xl overflow-hidden border-2 border-blue-500 bg-black relative h-48 w-full max-w-sm mx-auto">
+                                    <div id="reader-exemplar" className="w-full h-full"></div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-1.5">

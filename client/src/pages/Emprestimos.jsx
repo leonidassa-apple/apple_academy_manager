@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Calendar, Smartphone, User, RefreshCw, CheckCircle, Clock, SearchX, X, PenTool, Package, Eye } from 'lucide-react';
+import { Plus, Search, Calendar, Smartphone, User, RefreshCw, CheckCircle, Clock, SearchX, X, PenTool, Package, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import LoanModal from '../components/LoanModal';
 
 export default function Emprestimos() {
@@ -11,6 +11,10 @@ export default function Emprestimos() {
 
     // View detail modal state
     const [viewLoan, setViewLoan] = useState(null);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const fetchLoans = () => {
         setLoading(true);
@@ -56,6 +60,9 @@ export default function Emprestimos() {
         if (showHistory) return matchesSearch;
         return matchesSearch && loan.status === 'Ativo';
     });
+
+    const totalPages = Math.ceil(filteredLoans.length / itemsPerPage);
+    const paginatedLoans = filteredLoans.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="p-4 max-w-[1400px] mx-auto animate-in fade-in duration-700">
@@ -184,7 +191,7 @@ export default function Emprestimos() {
                                     </td>
                                 </tr>
                             ) : (
-                                filteredLoans.map((loan) => (
+                                paginatedLoans.map((loan) => (
                                     <tr key={loan.id} className="hover:bg-blue-50/20 transition-all group">
                                         <td className="px-4 py-4 whitespace-nowrap">
                                             <button
@@ -268,6 +275,68 @@ export default function Emprestimos() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Modern Pagination Area - Standardized Premium Style */}
+                <div className="mt-auto px-8 py-6 border-t border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-6 bg-slate-50/30">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <div className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                            Mostrando <span className="text-blue-600 px-1">{filteredLoans.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} — {Math.min(currentPage * itemsPerPage, filteredLoans.length)}</span> de <span className="text-slate-900">{filteredLoans.length}</span> registros
+                        </div>
+                        <div className="relative group min-w-[140px]">
+                            <select
+                                className="w-full pl-5 pr-10 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 cursor-pointer appearance-none transition-all shadow-sm group-hover:border-blue-200"
+                                value={itemsPerPage}
+                                onChange={(e) => {
+                                    setItemsPerPage(parseInt(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <option value={10}>Exibir 10</option>
+                                <option value={20}>Exibir 20</option>
+                                <option value={50}>Exibir 50</option>
+                            </select>
+                            <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-blue-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
+                        >
+                            <ChevronLeft size={22} />
+                        </button>
+
+                        <div className="flex items-center gap-2 mx-3">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) pageNum = i + 1;
+                                else if (currentPage <= 3) pageNum = i + 1;
+                                else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                else pageNum = currentPage - 2 + i;
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`w-12 h-12 rounded-[1.25rem] font-black text-sm transition-all shadow-sm ${currentPage === pageNum ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-100 scale-110' : 'bg-white hover:bg-blue-50 text-slate-500 border border-slate-100 hover:border-blue-200'}`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                            className="p-3 bg-white border border-slate-200 rounded-2xl hover:border-blue-400 transition-all text-slate-600 disabled:opacity-30 disabled:hover:border-slate-200 shadow-sm"
+                        >
+                            <ChevronRight size={22} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
